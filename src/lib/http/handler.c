@@ -1,9 +1,5 @@
 #include "handler.h"
 
-
-
-
-
 int handle_error(response *serv_resp, int error_flag){
 
     reset_response(serv_resp);

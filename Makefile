@@ -1,7 +1,7 @@
 # --- Config ---
 CC       := gcc
-CFLAGS   := -WCL4 -Wextra -g -MMD -MP 
-TARGET   := main
+CFLAGS   := -Wall -Wextra -g -MMD -MP 
+TARGET   := build/main
 
 # --- Path ---
 SRCS     := $(shell find src -name "*.c")
@@ -17,6 +17,7 @@ INCLUDES := $(addprefix -I, $(INC_DIRS))
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
+	@mkdir -p $(dir $@)
 	$(CC) $(OBJS) -o $@
 
 
@@ -25,7 +26,7 @@ obj/%.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -rf obj/ $(TARGET)
+	rm -rf obj/ build/ $(TARGET)
 
 re: clean all
 
