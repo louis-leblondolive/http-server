@@ -39,7 +39,15 @@ typedef enum Char_Expect {
 } char_expect;
 
 
-request *parse_raw_request(char *raw_request, int bytes_received);
+int parse_raw_request(char *raw_request, request *parsed_request, int bytes_received);
+/*
+    parse_raw_request parses an http request from text to struct Request
+
+    return value : 
+    Function will return 0 if call is successful 
+    Otherwise, it will return the http error code corresponding to the error that occured
+*/
+
 void print_request(request *r);
 
 #endif 

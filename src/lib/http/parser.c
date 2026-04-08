@@ -1,7 +1,5 @@
 #include "parser.h"
 
-// attention il va falloir gérer le fait que le curseur peut être plus grand que le nombre de bytes reçus !
-
 
 void print_request(request *r){
     printf("%s %s %s\n", r->method, r->path, r->version);
@@ -10,27 +8,15 @@ void print_request(request *r){
     }
     printf("\n");
     printf("%s\n", r->body);
+    printf("\n");
 }
 
 
-void raise_syntax_error(void){
-    printf("mettre une erreur ici qui arrête le truc\n");
-}
-
-void check_cursor(int cursor){
-    if(cursor >= MAX_REQUEST_LEN) raise_syntax_error();
-}
-
-void check_position(int pos, int bound){
-    if(pos >= bound) raise_syntax_error();
-    
-}
-
-void move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool *seen_separator){
+int move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool *seen_separator){
         
         char_expect expected_char = EXPECTING_CR;
 
-        while(*cursor < MAX_REQUEST_LEN){
+        while(*cursor < bytes_received && *cursor < MAX_REQUEST_LEN){
 
             switch (expected_char)
             {
@@ -39,7 +25,7 @@ void move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool 
                     expected_char = EXPECTING_LF; 
                     (*cursor)++;
                 }
-                else raise_syntax_error();
+                else return 400;    // Bad request 
                 break;
             
             case EXPECTING_LF:
@@ -47,7 +33,7 @@ void move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool 
                     expected_char = ANY;
                     (*cursor)++;
                 }
-                else raise_syntax_error();
+                else return 400;    // Bad request 
                 break;
             
             case ANY:
@@ -56,25 +42,27 @@ void move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool 
                     (*cursor)++;
                 }
                 else{
-                    return;
+                    return 0;
                 }
 
             case EXPECTING_FINAL_LF:
                 if(raw_request[*cursor] == '\n'){
                     (*cursor)++;
                     *seen_separator = true;
-                    return; 
+                    return 0; 
                 }
             
             default:
+                return 500;
                 break;
             }
         }
+    return 0; // reached the end of the request, handled in parse_raw_request 
 }
 
-request *parse_raw_request(char *raw_request, int bytes_received){
 
-    request *client_req = (request*)malloc(sizeof(request));
+int parse_raw_request(char *raw_request, request *client_req, int bytes_received){
+
     parsing_state current_state = PARSING_METHOD;
     
     int cursor = 0;
@@ -85,22 +73,22 @@ request *parse_raw_request(char *raw_request, int bytes_received){
 
     while(cursor < bytes_received){
 
+        if (cursor >= MAX_REQUEST_LEN) return 400;
+
         switch (current_state){
 
         case PARSING_METHOD:
 
-            check_cursor(cursor);
-
             if(raw_request[cursor] == ' '){
 
-                while(cursor < MAX_REQUEST_LEN && raw_request[cursor] == ' ') cursor ++;
+                while(cursor < bytes_received && raw_request[cursor] == ' ') cursor ++;
 
                 client_req->path[pos] = '\0';
                 pos = 0;
                 current_state = PARSING_PATH;
 
             } else {
-                check_position(pos, MAX_METHOD_LEN);
+                if(pos >= MAX_METHOD_LEN) return 400;
 
                 client_req->method[pos] = raw_request[cursor];
                 pos ++;
@@ -111,18 +99,16 @@ request *parse_raw_request(char *raw_request, int bytes_received){
 
         case PARSING_PATH:
 
-            check_cursor(cursor);
-
             if(raw_request[cursor] == ' '){
 
-                while(cursor < MAX_REQUEST_LEN && raw_request[cursor] == ' ') cursor ++;
+                while(cursor < bytes_received && raw_request[cursor] == ' ') cursor ++;
 
                 client_req->path[pos] = '\0';
                 pos = 0;
                 current_state = PARSING_VERSION;
 
             } else {
-                check_position(pos, MAX_PATH_LEN);
+                if(pos >= MAX_PATH_LEN) return 414;
 
                 client_req->path[pos] = raw_request[cursor];
                 pos ++;
@@ -133,15 +119,14 @@ request *parse_raw_request(char *raw_request, int bytes_received){
 
         case PARSING_VERSION:
 
-            check_cursor(cursor);
-
             if(raw_request[cursor] == '\r'){
 
                 client_req->version[pos] = '\0';
                 pos = 0;
 
-                move_to_next_line(raw_request, bytes_received, &cursor, &seen_separator);
-                
+                int try_move = move_to_next_line(raw_request, bytes_received, &cursor, &seen_separator);
+                if(try_move != 0) return try_move;
+
                 if(seen_separator){
                     current_state = PARSING_BODY;
                 } else {
@@ -149,7 +134,7 @@ request *parse_raw_request(char *raw_request, int bytes_received){
                 }
             }
             else {
-                check_position(pos, MAX_VERSION_LEN);
+                if(pos >= MAX_VERSION_LEN) return 400;
 
                 client_req->version[pos] = raw_request[cursor];
                 pos ++;
@@ -160,19 +145,17 @@ request *parse_raw_request(char *raw_request, int bytes_received){
 
         case PARSING_HEADER_KEY:
 
-            check_cursor(cursor);
-
             if(raw_request[cursor] == ':'){
 
                 cursor ++;
-                while(cursor < MAX_REQUEST_LEN && raw_request[cursor] == ' ') cursor ++;
+                while(cursor < bytes_received && raw_request[cursor] == ' ') cursor ++;
 
                 client_req->headers[header_count].key[pos] = '\0';
                 pos = 0;
                 current_state = PARSING_HEADER_VALUE;
             }
             else{
-                check_position(pos, MAX_HEADER_KEY_SIZE);
+                if(pos >= MAX_HEADER_KEY_SIZE) return 431;
                 
                 client_req->headers[header_count].key[pos] = raw_request[cursor];
                 pos ++;
@@ -182,14 +165,13 @@ request *parse_raw_request(char *raw_request, int bytes_received){
 
         case PARSING_HEADER_VALUE:
 
-            check_cursor(cursor);
-
             if(raw_request[cursor] == '\r'){
 
                 client_req->headers[header_count].value[pos] = '\0';
                 pos = 0;
 
-                move_to_next_line(raw_request, bytes_received, &cursor, &seen_separator);
+                int try_move = move_to_next_line(raw_request, bytes_received, &cursor, &seen_separator);
+                if(try_move != 0) return try_move;
                 
                 if(seen_separator){
                     current_state = PARSING_BODY;
@@ -200,7 +182,7 @@ request *parse_raw_request(char *raw_request, int bytes_received){
                 header_count ++;
             }
             else {
-                check_position(pos, MAX_HEADER_VALUE_SIZE);
+                if(pos >= MAX_HEADER_VALUE_SIZE) return 431;
 
                 client_req->headers[header_count].value[pos] = raw_request[cursor];
                 pos ++;
@@ -211,8 +193,7 @@ request *parse_raw_request(char *raw_request, int bytes_received){
 
         case PARSING_BODY:
             
-            check_cursor(cursor);
-            check_position(pos, MAX_BODY_LEN);
+            if(pos >= MAX_BODY_LEN) return 413;
 
             client_req->body[pos] = raw_request[cursor];
             pos ++;
@@ -228,5 +209,5 @@ request *parse_raw_request(char *raw_request, int bytes_received){
     client_req->header_count = header_count;
 
 
-    return client_req;
+    return 0;
 }

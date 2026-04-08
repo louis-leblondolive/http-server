@@ -47,7 +47,38 @@ void listener(int sock_fd){
 
         if(fork() == 0){    // child process
             close(sock_fd);
-            if(send(client_fd, "Hello, world !", 14, 0) == -1) perror("send");
+
+            // Receive data
+            char raw_request[MAX_REQUEST_LEN];
+            ssize_t bytes_received = recv(client_fd, raw_request, MAX_REQUEST_LEN, 0);
+
+            if(bytes_received == 0){
+                perror("server : peer closed its half side of the connection");
+                close(client_fd);
+                exit(1);
+            }
+            if(bytes_received == -1){
+                perror("server : recv");
+            }
+
+            request client_req;
+            int parse_res = parse_raw_request(raw_request, &client_req, bytes_received);
+
+            if(parse_res != 0){
+                printf("error parsing request %d\n", parse_res);
+                close(client_fd);
+                exit(1);
+            }
+
+                // testing request
+                print_request(&client_req);
+
+            // Process
+                // ...
+            
+            // Respond
+                // ...
+
             close(client_fd);
             exit(0);
         }
