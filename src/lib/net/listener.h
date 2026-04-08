@@ -26,6 +26,6 @@
     Listens for any incoming connections and manages accepts
     The function contains an infinite loop : it will never return 
 */
-void listener(int sock_fd);
+void listener(config_infos *cfg_infos, int sock_fd);
 
 #endif

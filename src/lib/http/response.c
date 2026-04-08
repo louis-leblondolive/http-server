@@ -68,7 +68,7 @@ int add_header(response *serv_resp, char *key, char *value){
 }
 
 
-int init_response_defaults(response *serv_resp, int code){
+int init_response_status(response *serv_resp, int code){
 
     if(strlen(HTTP_VERSION) > MAX_VERSION_LEN) return 500;
     strcpy(serv_resp->version, HTTP_VERSION);
@@ -83,6 +83,13 @@ int init_response_defaults(response *serv_resp, int code){
     snprintf(code_str, sizeof(code_str), "%d", code);
     if(strlen(code_str) > MAX_CODE_LEN) return 500;
     strcpy(serv_resp->code, code_str);
+    
+
+    char date[64];
+    time_t now = time(NULL);
+    struct tm *gmt = gmtime(&now);
+    strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S GMT", gmt);
+    if(add_header(serv_resp, "Date",  date)) return 500;
 
     return 0;
 }
@@ -103,7 +110,7 @@ int init_response_content_length(response *serv_resp){
 }
 
 
-char *build_text_response(response *serv_resp){
+char *build_text_response(config_infos* cfg_infos, response *serv_resp){
     // assume that request length has been tested and is the right size
     
 
@@ -130,7 +137,7 @@ char *build_text_response(response *serv_resp){
         cursor++;
     }
 
-    printf("response - done writing status\n");
+    if(cfg_infos->verbose) printf("[DEBUG] response - done writing status\n");
     
     for (int h = 0; h < serv_resp->header_count; h++){
         
@@ -144,7 +151,7 @@ char *build_text_response(response *serv_resp){
         }
     }
     
-    printf("response - done writing headers\n");
+    if(cfg_infos->verbose) printf("[DEBUG] response - done writing headers\n");
 
     text_response[cursor] = '\r';
     cursor ++;
@@ -156,7 +163,7 @@ char *build_text_response(response *serv_resp){
         cursor++;
     }
 
-    printf("response - done writing body\n");
+    if(cfg_infos->verbose) printf("[DEBUG] response - done writing body\n");
 
     text_response[cursor] = '\0';
 

@@ -20,7 +20,7 @@ int send_all(int fd, char *buf, size_t len){
 }
 
 
-void listener(int sock_fd){
+void listener(config_infos *cfg_infos, int sock_fd){
 
     // listen on sock_fd, new connections on client_fd
 
@@ -43,7 +43,7 @@ void listener(int sock_fd){
         exit(1);
     }
 
-    printf("Server online, listening on port %s\n", PORT);
+    if (!cfg_infos->quiet) printf("[INFO] Server online, listening on port %s\n", PORT);
 
     while(1){
 
@@ -54,7 +54,7 @@ void listener(int sock_fd){
             continue;
         }
         
-        printf("server : got connection from %s\n", sockaddr_in_addr_to_str(&client_addr));
+        if (!cfg_infos->quiet) printf("[INFO] Server : got connection from %s\n", sockaddr_in_addr_to_str(&client_addr));
 
         if(fork() == 0){    // child process
             close(sock_fd);
@@ -77,31 +77,38 @@ void listener(int sock_fd){
             int parse_res = parse_raw_request(raw_request, &client_req, bytes_received);
             
             // testing request
-            printf("parsed request : \n");
-            print_request(&client_req);
+            if(!cfg_infos->quiet){
+                printf("[INFO] parsed request : \n");
+                print_request(&client_req);
+            }
+           
 
             // Process
             response serv_resp;
             memset(&serv_resp, 0, sizeof(response));
-            if (route_request(&client_req, &serv_resp, parse_res) != 0){
+            if (route_request(cfg_infos, &client_req, &serv_resp, parse_res) != 0){
                 perror("Server error while routing request\n");
                 close(client_fd);
                 exit(1);
             };
             
             // testing response
-            printf("processed request into response :\n");
-            print_reponse(&serv_resp);
+            if(!cfg_infos->quiet){
+                printf("[INFO] processed request into response :\n");
+                print_reponse(&serv_resp);
+            }
 
             // Respond
-            char *raw_response = build_text_response(&serv_resp);
-
-            printf("sending raw response\n");
-            printf("%s\n", raw_response);
+            char *raw_response = build_text_response(cfg_infos, &serv_resp);
+            
+            if(cfg_infos->verbose){
+                printf("[DEBUG] sending raw response\n");
+                printf("%s\n", raw_response);
+            }
 
             int send_res = send_all(client_fd, raw_response, strlen(raw_response));
             
-            printf("closing connection\n");
+            if(!cfg_infos->quiet) printf("[INFO] closing connection\n");
             free(raw_response);
             close(client_fd);
 

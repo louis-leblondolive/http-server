@@ -1,0 +1,94 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+ 
+body {
+  font-family: system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #1a1a1a;
+  background: #f5f4f0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+ 
+header {
+  background: #1a1a1a;
+  color: #f5f4f0;
+  padding: 2rem;
+  text-align: center;
+}
+ 
+header h1 {
+  font-size: 2rem;
+  font-weight: 500;
+}
+ 
+header .subtitle {
+  color: #999;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+ 
+main {
+  flex: 1;
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+ 
+.card {
+  background: #fff;
+  border: 0.5px solid #ddd;
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+ 
+.card h2 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #444;
+  margin-bottom: 0.5rem;
+}
+ 
+.card p, .card li {
+  font-size: 0.95rem;
+  color: #555;
+}
+ 
+.card ul {
+  list-style: none;
+  padding: 0;
+}
+ 
+.card ul li {
+  padding: 0.2rem 0;
+}
+ 
+.card a {
+  color: #1a1a1a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+ 
+code {
+  font-family: monospace;
+  background: #f0ede6;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+ 
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.8rem;
+  color: #aaa;
+}

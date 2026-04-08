@@ -1,6 +1,8 @@
 #ifndef CONFIG
 #define CONFIG
 
+#include <stdbool.h>
+
 //  Server parameters
 #define PORT "3490"
 #define BACKLOG 10
@@ -20,5 +22,10 @@
 
 #define MAX_CODE_LEN 4
 #define MAX_REASON_LEN 64
+
+typedef struct Config_infos {
+    bool quiet;
+    bool verbose;
+} config_infos;
 
 #endif
