@@ -1,7 +1,20 @@
 #ifndef CONFIG
 #define CONFIG
 
+//  Server parameters
 #define PORT "3490"
 #define BACKLOG 10
+
+//  HTTP parameters
+#define MAX_REQUEST_LEN 4096    // keep requests under 4kb
+
+#define MAX_HEADER_KEY_SIZE 64
+#define MAX_HEADER_VALUE_SIZE 512
+
+#define MAX_METHOD_LEN 12
+#define MAX_PATH_LEN 512
+#define MAX_VERSION_LEN 12
+#define MAX_HEADER_NB 32
+#define MAX_BODY_LEN 2048
 
 #endif
