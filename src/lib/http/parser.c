@@ -8,7 +8,6 @@ void print_request(request *r){
     }
     printf("\n");
     printf("%s\n", r->body);
-    printf("\n");
 }
 
 

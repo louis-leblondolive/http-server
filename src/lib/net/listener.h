@@ -4,6 +4,7 @@
 
 #include <stdio.h>      
 #include <stdlib.h>      
+#include <string.h>
 #include <errno.h>       
 #include <sys/types.h>  
 #include <sys/socket.h>  
@@ -14,8 +15,12 @@
 #include <unistd.h>      
 
 #include "config.h"
+#include "structures.h"
+
 #include "utils.h"
 #include "parser.h"
+#include "router.h"
+#include "response.h"
 
 /*
     Listens for any incoming connections and manages accepts

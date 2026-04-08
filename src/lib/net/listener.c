@@ -8,6 +8,17 @@ void sigchld_handler(int s){
     errno = saved_errno;
 }
 
+int send_all(int fd, char *buf, size_t len){
+
+    size_t sent = 0;
+    while(sent < len){
+        ssize_t n = send(fd, (void*)buf, len, 0);
+        if(n == -1) return -1;
+        sent += n;
+    }
+    return 0;
+}
+
 
 void listener(int sock_fd){
 
@@ -43,7 +54,7 @@ void listener(int sock_fd){
             continue;
         }
         
-        printf("server: got connection from %s\n", sockaddr_in_addr_to_str(&client_addr));
+        printf("server : got connection from %s\n", sockaddr_in_addr_to_str(&client_addr));
 
         if(fork() == 0){    // child process
             close(sock_fd);
@@ -62,24 +73,43 @@ void listener(int sock_fd){
             }
 
             request client_req;
+            memset(&client_req, 0, sizeof(request));
             int parse_res = parse_raw_request(raw_request, &client_req, bytes_received);
-
-            if(parse_res != 0){
-                printf("error parsing request %d\n", parse_res);
-                close(client_fd);
-                exit(1);
-            }
-
-                // testing request
-                print_request(&client_req);
+            
+            // testing request
+            printf("parsed request : \n");
+            print_request(&client_req);
 
             // Process
-                // ...
+            response serv_resp;
+            memset(&serv_resp, 0, sizeof(response));
+            if (route_request(&client_req, &serv_resp, parse_res) != 0){
+                perror("Server error while routing request\n");
+                close(client_fd);
+                exit(1);
+            };
             
-            // Respond
-                // ...
+            // testing response
+            printf("processed request into response :\n");
+            print_reponse(&serv_resp);
 
+            // Respond
+            char *raw_response = build_text_response(&serv_resp);
+
+            printf("sending raw response\n");
+            printf("%s\n", raw_response);
+
+            int send_res = send_all(client_fd, raw_response, strlen(raw_response));
+            
+            printf("closing connection\n");
+            free(raw_response);
             close(client_fd);
+
+            if(send_res == -1){
+                perror("server : send");
+                exit(1);
+            }
+            
             exit(0);
         }
 
