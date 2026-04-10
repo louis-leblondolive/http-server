@@ -14,12 +14,12 @@ typedef struct HTTP_Reason_Code {
 } http_reason_code;
 
 
-char *http_reason(int code);
+const http_reason_code *get_http_reason(http_status status);
 void print_reponse(response *r);
 void reset_response(response *serv_resp);
-int add_header(response *serv_resp, char *key, char *value);
-int init_response_status(response *serv_resp, int code);
-int init_response_content_length(response *serv_resp);
+http_status add_header(response *serv_resp, char *key, char *value);
+http_status init_response_status(response *serv_resp, http_status status);
+http_status init_response_content_length(response *serv_resp);
 char *build_text_response(config_infos* cfg_infos, response *serv_resp);
 
 #endif

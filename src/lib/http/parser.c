@@ -11,9 +11,10 @@ void print_request(request *r){
 }
 
 
-int move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool *seen_separator){
+http_status move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool *seen_separator){
         
         char_expect expected_char = EXPECTING_CR;
+        *seen_separator = false;
 
         while(*cursor < bytes_received && *cursor < MAX_REQUEST_LEN){
 
@@ -24,7 +25,7 @@ int move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool *
                     expected_char = EXPECTING_LF; 
                     (*cursor)++;
                 }
-                else return 400;    // Bad request 
+                else return HTTP_BAD_REQUEST;    
                 break;
             
             case EXPECTING_LF:
@@ -32,7 +33,7 @@ int move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool *
                     expected_char = ANY;
                     (*cursor)++;
                 }
-                else return 400;    // Bad request 
+                else return HTTP_BAD_REQUEST;    
                 break;
             
             case ANY:
@@ -41,26 +42,28 @@ int move_to_next_line(char *raw_request, int bytes_received, int *cursor, bool *
                     (*cursor)++;
                 }
                 else{
-                    return 0;
+                    return HTTP_OK;
                 }
+                break;
 
             case EXPECTING_FINAL_LF:
                 if(raw_request[*cursor] == '\n'){
                     (*cursor)++;
                     *seen_separator = true;
-                    return 0; 
+                    return HTTP_OK; 
+                } else {
+                    return HTTP_BAD_REQUEST;
                 }
             
             default:
-                return 500;
-                break;
+                return HTTP_INTERNAL_ERROR;
             }
         }
-    return 0; // reached the end of the request, handled in parse_raw_request 
+    return HTTP_OK; // reached the end of the request, handled in parse_raw_request 
 }
 
 
-int parse_raw_request(char *raw_request, request *client_req, int bytes_received){
+http_status parse_raw_request(char *raw_request, request *client_req, int bytes_received){
 
     parsing_state current_state = PARSING_METHOD;
     
@@ -72,7 +75,7 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
 
     while(cursor < bytes_received){
 
-        if (cursor >= MAX_REQUEST_LEN) return 400;
+        if (cursor >= MAX_REQUEST_LEN) return HTTP_BAD_REQUEST;
 
         switch (current_state){
 
@@ -80,14 +83,17 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
 
             if(raw_request[cursor] == ' '){
 
-                while(cursor < bytes_received && raw_request[cursor] == ' ') cursor ++;
+                cursor ++;
+                if( (cursor >= MAX_REQUEST_LEN || cursor >= bytes_received) 
+                    || raw_request[cursor] == ' ') return HTTP_BAD_REQUEST;
+                // only one space allowed between method and path
 
-                client_req->path[pos] = '\0';
+                client_req->method[pos] = '\0';
                 pos = 0;
                 current_state = PARSING_PATH;
 
             } else {
-                if(pos >= MAX_METHOD_LEN) return 400;
+                if(pos >= MAX_METHOD_LEN) return HTTP_BAD_REQUEST;
 
                 client_req->method[pos] = raw_request[cursor];
                 pos ++;
@@ -100,14 +106,17 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
 
             if(raw_request[cursor] == ' '){
 
-                while(cursor < bytes_received && raw_request[cursor] == ' ') cursor ++;
+                cursor ++;
+                if( (cursor >= MAX_REQUEST_LEN || cursor >= bytes_received) 
+                    || raw_request[cursor] == ' ') return HTTP_BAD_REQUEST;
+                // only one space allowed between path and version
 
                 client_req->path[pos] = '\0';
                 pos = 0;
                 current_state = PARSING_VERSION;
 
             } else {
-                if(pos >= MAX_PATH_LEN) return 414;
+                if(pos >= MAX_PATH_LEN) return HTTP_URI_TOO_LONG;
 
                 client_req->path[pos] = raw_request[cursor];
                 pos ++;
@@ -118,13 +127,14 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
 
         case PARSING_VERSION:
 
+            if(raw_request[cursor] == '\n') return HTTP_BAD_REQUEST;
             if(raw_request[cursor] == '\r'){
 
                 client_req->version[pos] = '\0';
                 pos = 0;
 
                 int try_move = move_to_next_line(raw_request, bytes_received, &cursor, &seen_separator);
-                if(try_move != 0) return try_move;
+                if(try_move != HTTP_OK) return try_move;
 
                 if(seen_separator){
                     current_state = PARSING_BODY;
@@ -133,7 +143,7 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
                 }
             }
             else {
-                if(pos >= MAX_VERSION_LEN) return 400;
+                if(pos >= MAX_VERSION_LEN) return HTTP_BAD_REQUEST;
 
                 client_req->version[pos] = raw_request[cursor];
                 pos ++;
@@ -144,7 +154,15 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
 
         case PARSING_HEADER_KEY:
 
+            if(header_count >= MAX_HEADER_NB) return HTTP_BAD_REQUEST;
+
             if(raw_request[cursor] == ':'){
+
+                if(pos <= 0) return HTTP_BAD_REQUEST; 
+                    // key-less header is forbidden
+                if(client_req->headers[header_count].key[pos - 1] == ' ') 
+                    return HTTP_BAD_REQUEST;           
+                    // white space before ':' is forbidden 
 
                 cursor ++;
                 while(cursor < bytes_received && raw_request[cursor] == ' ') cursor ++;
@@ -154,7 +172,7 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
                 current_state = PARSING_HEADER_VALUE;
             }
             else{
-                if(pos >= MAX_HEADER_KEY_SIZE) return 431;
+                if(pos >= MAX_HEADER_KEY_SIZE) return HTTP_HEADER_TOO_LARGE;
                 
                 client_req->headers[header_count].key[pos] = raw_request[cursor];
                 pos ++;
@@ -170,7 +188,7 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
                 pos = 0;
 
                 int try_move = move_to_next_line(raw_request, bytes_received, &cursor, &seen_separator);
-                if(try_move != 0) return try_move;
+                if(try_move != HTTP_OK) return try_move;
                 
                 if(seen_separator){
                     current_state = PARSING_BODY;
@@ -181,7 +199,7 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
                 header_count ++;
             }
             else {
-                if(pos >= MAX_HEADER_VALUE_SIZE) return 431;
+                if(pos >= MAX_HEADER_VALUE_SIZE) return HTTP_HEADER_TOO_LARGE;
 
                 client_req->headers[header_count].value[pos] = raw_request[cursor];
                 pos ++;
@@ -192,7 +210,7 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
 
         case PARSING_BODY:
             
-            if(pos >= MAX_BODY_LEN) return 413;
+            if(pos >= MAX_BODY_LEN) return HTTP_REQUEST_ENTITY_TOO_LARGE;
 
             client_req->body[pos] = raw_request[cursor];
             pos ++;
@@ -200,7 +218,7 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
             break;
 
         default:
-            break;
+            return HTTP_INTERNAL_ERROR; // current_state must be in one of the above states
         }
     }
 
@@ -208,5 +226,5 @@ int parse_raw_request(char *raw_request, request *client_req, int bytes_received
     client_req->header_count = header_count;
 
 
-    return 0;
+    return HTTP_OK;
 }

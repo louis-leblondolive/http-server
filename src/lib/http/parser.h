@@ -26,7 +26,7 @@ typedef enum Char_Expect {
 } char_expect;
 
 
-int parse_raw_request(char *raw_request, request *parsed_request, int bytes_received);
+http_status parse_raw_request(char *raw_request, request *parsed_request, int bytes_received);
 /*
     parse_raw_request parses an http request from text to struct Request
 

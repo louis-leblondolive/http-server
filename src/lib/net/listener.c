@@ -12,7 +12,7 @@ int send_all(int fd, char *buf, size_t len){
 
     size_t sent = 0;
     while(sent < len){
-        ssize_t n = send(fd, (void*)buf, len, 0);
+        ssize_t n = send(fd, (void*)buf + sent, len - sent, 0);
         if(n == -1) return -1;
         sent += n;
     }
@@ -56,7 +56,14 @@ void listener(config_infos *cfg_infos, int sock_fd){
         
         if (!cfg_infos->quiet) printf("[INFO] Server : got connection from %s\n", sockaddr_in_addr_to_str(&client_addr));
 
-        if(fork() == 0){    // child process
+        pid_t pid = fork();
+        if(pid == -1){
+            perror("server : fork");
+            close(client_fd);
+            continue;
+        }
+
+        if(pid == 0){    // child process
             close(sock_fd);
 
             // Receive data
@@ -70,11 +77,13 @@ void listener(config_infos *cfg_infos, int sock_fd){
             }
             if(bytes_received == -1){
                 perror("server : recv");
+                close(client_fd);
+                exit(1);
             }
 
             request client_req;
             memset(&client_req, 0, sizeof(request));
-            int parse_res = parse_raw_request(raw_request, &client_req, bytes_received);
+            http_status parse_res = parse_raw_request(raw_request, &client_req, bytes_received);
             
             // testing request
             if(!cfg_infos->quiet){
@@ -86,8 +95,8 @@ void listener(config_infos *cfg_infos, int sock_fd){
             // Process
             response serv_resp;
             memset(&serv_resp, 0, sizeof(response));
-            if (route_request(cfg_infos, &client_req, &serv_resp, parse_res) != 0){
-                perror("Server error while routing request\n");
+            if (route_request(cfg_infos, &client_req, &serv_resp, parse_res) != HTTP_OK){
+                fprintf(stderr, "[ERROR] Server error while routing request\n");
                 close(client_fd);
                 exit(1);
             };
@@ -100,7 +109,12 @@ void listener(config_infos *cfg_infos, int sock_fd){
 
             // Respond
             char *raw_response = build_text_response(cfg_infos, &serv_resp);
-            
+            if(!raw_response){
+                fprintf(stderr, "[ERROR] Server couldn't build text response\n");
+                close(client_fd);
+                exit(1);
+            }
+
             if(cfg_infos->verbose){
                 printf("[DEBUG] sending raw response\n");
                 printf("%s\n", raw_response);
