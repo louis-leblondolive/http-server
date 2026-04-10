@@ -27,7 +27,7 @@ bool file_is_reachable(char *path){
     if(getcwd(absolute_path, MAX_PATH_LEN - 4) == NULL) return false;
 
     char full_path[MAX_PATH_LEN * 2];
-    snprintf(full_path, 2 * MAX_PATH_LEN, "%s%s", absolute_path, path);
+    snprintf(full_path, 2 * MAX_PATH_LEN, "%s/%s", absolute_path, path);
 
     char resolved_path[MAX_PATH_LEN * 2];
     if(realpath(full_path, resolved_path) == NULL) return false;
@@ -105,7 +105,7 @@ http_status route_request(config_infos *cfg_infos, request *client_req, response
 
     if(strlen(client_req->path) == 0 || client_req->path[0] != '/' 
         || !path_is_valid(client_req->path)){
-            
+
         http_status handle_res = handle_error(serv_resp, HTTP_BAD_REQUEST);
         return handle_res;
     }   // need to check path syntax before assigning real path 
