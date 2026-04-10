@@ -9,6 +9,7 @@ static const http_reason_code http_403 = {403, "Forbidden"};
 static const http_reason_code http_404 = {404, "Not Found"};
 static const http_reason_code http_413 = {413, "Request Entity Too Large"};
 static const http_reason_code http_414 = {414, "Request URI Too Long"};
+static const http_reason_code http_417 = {417, "Expectation Failed"};
 static const http_reason_code http_418 = {418, "I'm a teapot"};
 static const http_reason_code http_431 = {431, "Request Header Fields Too Large"};
 static const http_reason_code http_500 = {500, "Internal Server Error"};
@@ -40,6 +41,8 @@ const http_reason_code *get_http_reason(http_status status){
         return &http_413;
     case HTTP_URI_TOO_LONG:
         return &http_414;
+    case HTTP_EXPECTATION_FAILED:
+        return &http_417;
     case HTTP_TEAPOT:
         return &http_418;
     case HTTP_HEADER_TOO_LARGE:

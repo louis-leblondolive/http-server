@@ -1,5 +1,8 @@
 #include "handler.h"
 
+
+// --- UTILS ---------------   
+
 static const mime_type mime_types[] = {
     { "html", "text/html; charset=utf-8" },
     { "css",  "text/css" },
@@ -23,9 +26,6 @@ char *get_mime_type(char *path){
     }
     return "application/octet-stream";
 }
-
-
-
 
 char *copy_file(FILE *stream){
 
@@ -53,6 +53,8 @@ char *copy_file(FILE *stream){
 }
 
 
+// --- HANDLE FUNCTIONS ---------------    
+
 
 http_status handle_error(response *serv_resp, http_status err_status){
 
@@ -77,7 +79,6 @@ http_status handle_error(response *serv_resp, http_status err_status){
 http_status handle_get(request *client_req, response *serv_resp){
 
     // get copy of file 
-
     FILE *stream = fopen(client_req->path, "rb");
 
     if(stream == NULL) return handle_error(serv_resp, HTTP_NOT_FOUND);

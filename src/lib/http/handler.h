@@ -12,6 +12,8 @@ typedef struct Mime_type {
     char *mime;
 } mime_type ;
 
+char *get_mime_type(char *path);
+
 http_status handle_error(response *serv_resp, http_status err_status);
 http_status handle_get(request *client_req, response *serv_resp);
 

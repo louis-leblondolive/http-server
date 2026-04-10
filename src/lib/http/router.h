@@ -1,6 +1,8 @@
 #ifndef ROUTER
 #define ROUTER
 
+#include "unistd.h"
+
 #include "structures.h"
 #include "handler.h"
 
