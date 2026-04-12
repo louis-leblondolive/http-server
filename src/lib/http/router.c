@@ -64,28 +64,44 @@ http_status check_request(request *client_req){
 
         header hd = client_req->headers[i];
         
-        if(strcmp(hd.key, "Content-Length") == 0){                  // Check Content Length
+        if(strcasecmp(hd.key, "Content-Length") == 0){                  // Check Content Length
 
             size_t len = 0;
             if(sscanf(hd.value, "%zu", &len) != 1) return HTTP_BAD_REQUEST;
-            if(len != strlen(client_req->body)) return HTTP_BAD_REQUEST;
+            if(len != client_req->body_len) return HTTP_BAD_REQUEST;
             content_length_exists = true;
         }
 
-        if(strcmp(hd.key, "Host") == 0 && strlen(hd.value) != 0){   // Check Host
+        if(strcasecmp(hd.key, "Host") == 0 && strlen(hd.value) != 0){   // Check Host
             host_exists = true;
         }
 
-        if(strcmp(hd.key, "Expect") == 0 && strcmp(hd.value, "100-continue") == 0){  // Expect
+        if(strcasecmp(hd.key, "Expect") == 0 && strcmp(hd.value, "100-continue") == 0){  // Expect
             return HTTP_EXPECTATION_FAILED;
         }
 
-        if(strcmp(hd.key, "Transfer-Encoding") == 0){               // Transfer Encoding 
+        if(strcasecmp(hd.key, "Transfer-Encoding") == 0){               // Transfer Encoding 
             return HTTP_NOT_IMPLEMENTED;
         }
+
+        if(strcasecmp(hd.key, "If-Modified-Since") == 0){               // Check modification date 
+
+            struct tm tm_client_rq = {0};
+            strptime(hd.value, "%a, %d %b %Y %H:%M:%S GMT", &tm_client_rq);
+            time_t client_req_modif_time = timegm(&tm_client_rq);
+
+            struct stat st;
+            if(stat(client_req->path, &st) == -1){
+                return HTTP_NOT_FOUND;
+            }
+
+            if(st.st_mtime <= client_req_modif_time){
+                return HTTP_NOT_MODIFIED;
+            }
+        }   
     }
     
-    if(!content_length_exists && strlen(client_req->body) != 0) return HTTP_BAD_REQUEST;
+    if(!content_length_exists && client_req->body_len != 0) return HTTP_BAD_REQUEST;
     if(!host_exists) return HTTP_BAD_REQUEST;
 
     return HTTP_OK;
@@ -93,7 +109,8 @@ http_status check_request(request *client_req){
 
 
 
-http_status route_request(config_infos *cfg_infos, request *client_req, response *serv_resp, http_status error_flag){
+http_status route_request(config_infos *cfg_infos, request *client_req, 
+    response *serv_resp, http_status error_flag){
 
     if(cfg_infos->verbose) printf("[DEBUG] routing request\n");
    
@@ -120,12 +137,16 @@ http_status route_request(config_infos *cfg_infos, request *client_req, response
 
 
     // Routing request 
+    if(strcmp(client_req->method, "GET") == 0){         // GET
 
-    if(strcmp(client_req->method, "GET") == 0){ // GET
-
-        http_status handle_res = handle_get(client_req, serv_resp);
+        http_status handle_res = handle_get(client_req, serv_resp, false);
         return handle_res;
     } 
+    else if(strcmp(client_req->method, "HEAD") == 0) {  // HEAD 
+
+        http_status handle_res = handle_get(client_req, serv_resp, true);
+        return handle_res;
+    }
     else {
         http_status handle_res = handle_error(serv_resp, HTTP_NOT_IMPLEMENTED);
         return handle_res;

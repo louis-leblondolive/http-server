@@ -223,8 +223,17 @@ http_status parse_raw_request(char *raw_request, request *client_req, int bytes_
     }
 
     client_req->body[pos] = '\0';
+    client_req->body_len = pos;
     client_req->header_count = header_count;
 
+    for (int i = 0; i < header_count; i++){
+        
+        header hd = client_req->headers[i];
+        
+        if(strcasecmp(hd.key, "Connection") == 0){
+            strlcpy(client_req->connection_type, hd.value, MAX_HEADER_VALUE_SIZE);
+        }
+    }
 
     return HTTP_OK;
 }

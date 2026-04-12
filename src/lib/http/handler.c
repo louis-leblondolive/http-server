@@ -66,9 +66,18 @@ http_status handle_error(response *serv_resp, http_status err_status){
 
     if (add_header(serv_resp, "Content-Type", "text/html") != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
-    char body[128];
-    snprintf(body, sizeof(body), "<h1>%d - %s</h1>", reason_code->code, reason_code->reason);
-    strcpy(serv_resp->body, body);
+    if(err_status != HTTP_NO_CONTENT && err_status != HTTP_NOT_MODIFIED
+        && reason_code->code / 100 != 1){
+    
+        char body[128];
+        snprintf(body, sizeof(body), "<h1>%d - %s</h1>", reason_code->code, reason_code->reason);
+        strcpy(serv_resp->body, body);
+
+        serv_resp->body_len = strlen(serv_resp->body);
+    }
+    else {
+        serv_resp->body_len = 0;
+    }
 
     if (init_response_content_length(serv_resp) != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
@@ -76,23 +85,28 @@ http_status handle_error(response *serv_resp, http_status err_status){
 }
 
 
-http_status handle_get(request *client_req, response *serv_resp){
+http_status handle_get(request *client_req, response *serv_resp, bool head_only){
 
-    // get copy of file 
-    FILE *stream = fopen(client_req->path, "rb");
+    if(!head_only){
 
-    if(stream == NULL) return handle_error(serv_resp, HTTP_NOT_FOUND);
+        // read and copy files
+        FILE *stream = fopen(client_req->path, "rb");
 
-    char *copy = copy_file(stream);
-    if(!copy) return handle_error(serv_resp, HTTP_INTERNAL_ERROR);
+        if(stream == NULL) return handle_error(serv_resp, HTTP_NOT_FOUND);
 
-    fclose(stream);
+        char *copy = copy_file(stream);
+        if(!copy) return handle_error(serv_resp, HTTP_INTERNAL_ERROR);
 
-    // build response 
+        fclose(stream);
+        
+        
+        // add body to response 
+        strlcpy(serv_resp->body, copy, MAX_BODY_LEN);
+        free(copy);
+    }
+
+    // add headers
     http_status cache_res;
-
-    strlcpy(serv_resp->body, copy, MAX_BODY_LEN);
-    free(copy);
 
     cache_res = init_response_status(serv_resp, HTTP_OK);
     if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
@@ -101,6 +115,18 @@ http_status handle_get(request *client_req, response *serv_resp){
     if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
 
     cache_res = add_header(serv_resp, "Connection", "close");
+    if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
+
+    struct stat st;
+    if(stat(client_req->path, &st) == -1){
+        return handle_error(serv_resp, HTTP_NOT_FOUND);
+    }
+    serv_resp->body_len = st.st_size;
+    
+    char last_modified[128];
+    struct tm *tm_info = gmtime(&st.st_mtime);
+    strftime(last_modified, sizeof(last_modified), "%a, %d %b %Y %H:%M:%S GMT", tm_info);
+    cache_res = add_header(serv_resp, "Last-Modified", last_modified);
     if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
 
     cache_res = init_response_content_length(serv_resp);

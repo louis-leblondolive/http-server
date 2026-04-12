@@ -4,6 +4,8 @@
 #include <stdbool.h>
 
 //  Server parameters
+#define SERVER_NAME "olivehttpserver"
+#define SERVER_VERSION "1.0"
 #define PORT "3490"
 #define BACKLOG 10
 #define HTTP_VERSION "HTTP/1.1"

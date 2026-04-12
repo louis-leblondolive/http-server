@@ -3,6 +3,7 @@
 static const http_reason_code http_200 = {200, "Ok"};
 static const http_reason_code http_201 = {201, "Created"};
 static const http_reason_code http_204 = {204, "No Content"};
+static const http_reason_code http_304 = {304, "Not Modified"};
 static const http_reason_code http_400 = {400, "Bad Request"};
 static const http_reason_code http_401 = {401, "Unauthorized"};
 static const http_reason_code http_403 = {403, "Forbidden"};
@@ -28,6 +29,9 @@ const http_reason_code *get_http_reason(http_status status){
         return &http_201;
     case HTTP_NO_CONTENT:
         return &http_204;
+
+    case HTTP_NOT_MODIFIED:
+        return &http_304;
 
     case HTTP_BAD_REQUEST:
         return &http_400;
@@ -110,18 +114,21 @@ http_status init_response_status(response *serv_resp, http_status status){
     if(strlen(reason) > MAX_REASON_LEN) return HTTP_INTERNAL_ERROR;
     strcpy(serv_resp->reason, reason);
 
-
+    // Adding default headers
     char code_str[16];
     snprintf(code_str, sizeof(code_str), "%d", reason_code->code);
     if(strlen(code_str) > MAX_CODE_LEN) return HTTP_INTERNAL_ERROR;
     strcpy(serv_resp->code, code_str);
-    
 
     char date[64];
     time_t now = time(NULL);
     struct tm *gmt = gmtime(&now);
     strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S GMT", gmt);
     if(add_header(serv_resp, "Date",  date) != HTTP_OK) return HTTP_INTERNAL_ERROR;
+
+    char server_info[256];
+    snprintf(server_info, sizeof(server_info), "%s/%s", SERVER_NAME, SERVER_VERSION);
+    if(add_header(serv_resp, "Server", server_info) != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
     return HTTP_OK;
 }
@@ -132,7 +139,7 @@ http_status init_response_content_length(response *serv_resp){
     // Must be called after filling response body 
 
     char content_len_str[32];
-    snprintf(content_len_str, sizeof(content_len_str), "%ld", strlen(serv_resp->body));
+    snprintf(content_len_str, sizeof(content_len_str), "%zu", serv_resp->body_len);
 
     http_status add_h_res = add_header(serv_resp, "Content-Length", content_len_str);
 
@@ -149,7 +156,7 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp){
     // returns a pointer : free must be used upon usage 
     
     size_t status_len = strlen(serv_resp->version) + strlen(serv_resp->code) + strlen(serv_resp->reason) + 4;
-    size_t body_len = strlen(serv_resp->body);
+    size_t body_len = serv_resp->body_len;
     size_t headers_len = 0;
 
     for (int i = 0; i < serv_resp->header_count; i++){
