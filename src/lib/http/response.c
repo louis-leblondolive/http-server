@@ -130,6 +130,8 @@ http_status init_response_status(response *serv_resp, http_status status){
     snprintf(server_info, sizeof(server_info), "%s/%s", SERVER_NAME, SERVER_VERSION);
     if(add_header(serv_resp, "Server", server_info) != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
+    if(add_header(serv_resp, "Connection", "close") != HTTP_OK) return HTTP_INTERNAL_ERROR;
+
     return HTTP_OK;
 }
 

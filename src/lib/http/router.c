@@ -137,16 +137,22 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
 
 
     // Routing request 
-    if(strcmp(client_req->method, "GET") == 0){         // GET
+    if(strcmp(client_req->method, "GET") == 0){            // GET
 
         http_status handle_res = handle_get(client_req, serv_resp, false);
         return handle_res;
     } 
-    else if(strcmp(client_req->method, "HEAD") == 0) {  // HEAD 
+    else if(strcmp(client_req->method, "HEAD") == 0) {    // HEAD 
 
         http_status handle_res = handle_get(client_req, serv_resp, true);
         return handle_res;
     }
+    else if(strcmp(client_req->method, "OPTIONS") == 0) { // OPTIONS
+
+        http_status handle_res = handle_options(serv_resp);
+        return handle_res;
+    } 
+
     else {
         http_status handle_res = handle_error(serv_resp, HTTP_NOT_IMPLEMENTED);
         return handle_res;

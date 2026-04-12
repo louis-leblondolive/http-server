@@ -114,9 +114,6 @@ http_status handle_get(request *client_req, response *serv_resp, bool head_only)
     cache_res = add_header(serv_resp, "Content-Type", get_mime_type(client_req->path));
     if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
 
-    cache_res = add_header(serv_resp, "Connection", "close");
-    if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
-
     struct stat st;
     if(stat(client_req->path, &st) == -1){
         return handle_error(serv_resp, HTTP_NOT_FOUND);
@@ -129,6 +126,24 @@ http_status handle_get(request *client_req, response *serv_resp, bool head_only)
     cache_res = add_header(serv_resp, "Last-Modified", last_modified);
     if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
 
+    cache_res = init_response_content_length(serv_resp);
+    if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
+
+    return HTTP_OK;
+}
+
+
+http_status handle_options(response *serv_resp){
+
+    http_status cache_res;
+
+    cache_res = init_response_status(serv_resp, HTTP_OK);
+    if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
+
+    cache_res = add_header(serv_resp, "Allow", ALLOWED_METHODS);
+    if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
+
+    serv_resp->body_len = 0;
     cache_res = init_response_content_length(serv_resp);
     if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
 

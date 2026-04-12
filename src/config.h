@@ -9,6 +9,7 @@
 #define PORT "3490"
 #define BACKLOG 10
 #define HTTP_VERSION "HTTP/1.1"
+#define ALLOWED_METHODS "GET, HEAD, OPTIONS"
 
 //  HTTP parameters
 #define MAX_REQUEST_LEN 4096    // keep requests under 4kb
