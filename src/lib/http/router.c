@@ -65,10 +65,6 @@ http_status check_request(request *client_req){
         header hd = client_req->headers[i];
         
         if(strcasecmp(hd.key, "Content-Length") == 0){                  // Check Content Length
-
-            size_t len = 0;
-            if(sscanf(hd.value, "%zu", &len) != 1) return HTTP_BAD_REQUEST;
-            if(len != client_req->body_len) return HTTP_BAD_REQUEST;
             content_length_exists = true;
         }
 

@@ -8,6 +8,7 @@ static const http_reason_code http_400 = {400, "Bad Request"};
 static const http_reason_code http_401 = {401, "Unauthorized"};
 static const http_reason_code http_403 = {403, "Forbidden"};
 static const http_reason_code http_404 = {404, "Not Found"};
+static const http_reason_code http_408 = {408, "Request Time-out"};
 static const http_reason_code http_413 = {413, "Request Entity Too Large"};
 static const http_reason_code http_414 = {414, "Request URI Too Long"};
 static const http_reason_code http_417 = {417, "Expectation Failed"};
@@ -41,6 +42,8 @@ const http_reason_code *get_http_reason(http_status status){
         return &http_403;
     case HTTP_NOT_FOUND:
         return &http_404;
+    case HTTP_REQUEST_TIMEOUT:
+        return &http_408;
     case HTTP_REQUEST_ENTITY_TOO_LARGE:
         return &http_413;
     case HTTP_URI_TOO_LONG:
@@ -130,8 +133,6 @@ http_status init_response_status(response *serv_resp, http_status status){
     snprintf(server_info, sizeof(server_info), "%s/%s", SERVER_NAME, SERVER_VERSION);
     if(add_header(serv_resp, "Server", server_info) != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
-    if(add_header(serv_resp, "Connection", "close") != HTTP_OK) return HTTP_INTERNAL_ERROR;
-
     return HTTP_OK;
 }
 
@@ -153,9 +154,9 @@ http_status init_response_content_length(response *serv_resp){
 }
 
 
-char *build_text_response(config_infos* cfg_infos, response *serv_resp){
+char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *raw_response_len){
     // assume that request length has been tested and is the right size
-    // returns a pointer : free must be used upon usage 
+    // returns a pointer : free must be used after usage 
     
     size_t status_len = strlen(serv_resp->version) + strlen(serv_resp->code) + strlen(serv_resp->reason) + 4;
     size_t body_len = serv_resp->body_len;
@@ -169,7 +170,7 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp){
 
 
     char *text_response = (char*)malloc(sizeof(char) * total_len);
-    int cursor = 0;
+    size_t cursor = 0;
     
     if(!text_response) return NULL;
 
@@ -210,6 +211,8 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp){
     if(cfg_infos->verbose) printf("[DEBUG] response - done writing body\n");
 
     text_response[cursor] = '\0';
+    
+    *raw_response_len = cursor;
 
     return text_response;
 }

@@ -9,6 +9,8 @@
 #define PORT "3490"
 #define BACKLOG 10
 #define DEFAULT_PATH "www/index.html"
+#define TIMEOUT_SECONDS 5
+#define TIMEOUT_MILLISECONDS 0
 
 //  HTTP parameters
 #define MAX_REQUEST_LEN 4096    // keep requests under 4kb

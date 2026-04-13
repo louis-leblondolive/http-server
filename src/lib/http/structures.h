@@ -15,6 +15,7 @@ typedef enum Http_status {
     HTTP_UNAUTHORIZED,
     HTTP_FORBIDDEN,
     HTTP_NOT_FOUND,
+    HTTP_REQUEST_TIMEOUT,
     HTTP_REQUEST_ENTITY_TOO_LARGE,
     HTTP_URI_TOO_LONG, 
     HTTP_EXPECTATION_FAILED,
@@ -60,6 +61,8 @@ typedef struct Response {
 
     char body[MAX_BODY_LEN];
     size_t body_len;
+
+    char connection_type[MAX_HEADER_VALUE_SIZE];
 } response;
 
 #endif

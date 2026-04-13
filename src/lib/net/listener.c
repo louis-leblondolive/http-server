@@ -45,7 +45,7 @@ void listener(config_infos *cfg_infos, int sock_fd){
 
     if (!cfg_infos->quiet) printf("[INFO] Server online, listening on port %s\n", PORT);
 
-    while(1){
+    while(1){   // Server main loop 
 
         client_sin_size = sizeof(client_addr);
         client_fd = accept(sock_fd, (struct sockaddr *)&client_addr, &client_sin_size);
@@ -57,83 +57,150 @@ void listener(config_infos *cfg_infos, int sock_fd){
         if (!cfg_infos->quiet) printf("[INFO] Server : got connection from %s\n", sockaddr_in_addr_to_str(&client_addr));
 
         pid_t pid = fork();
+
         if(pid == -1){
             perror("server : fork");
             close(client_fd);
             continue;
         }
 
-        if(pid == 0){    // child process
+        if(pid == 0){    // Child process
+            int exit_status = 0;
+
             close(sock_fd);
-
-            // Receive data
-            char raw_request[MAX_REQUEST_LEN];
-            ssize_t bytes_received = recv(client_fd, raw_request, MAX_REQUEST_LEN, 0);
-
-            if(bytes_received == 0){
-                perror("server : peer closed its half side of the connection");
-                close(client_fd);
-                exit(1);
-            }
-            if(bytes_received == -1){
-                perror("server : recv");
-                close(client_fd);
-                exit(1);
-            }
-
-            request client_req;
-            memset(&client_req, 0, sizeof(request));
-            http_status parse_res = parse_raw_request(raw_request, &client_req, bytes_received);
             
-            // testing request
-            if(!cfg_infos->quiet){
-                printf("[INFO] parsed request : \n");
-                print_request(&client_req);
+            struct timeval timeout = {TIMEOUT_SECONDS, TIMEOUT_MILLISECONDS};
+            if(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1){
+                perror("server : setting client socket option");
+                close(client_fd);
+                exit(1);
             }
+
+            r_buffer *raw_request_buf = init_ring_buffer(2 * MAX_REQUEST_LEN + 1);
+
+            while(1){   // Client main loop 
+
+                //  ----- Receive and parse data --------------------------------------------
+                bool parsing_complete = false;
+                bool peer_closed = false;
+
+                request client_req;
+                memset(&client_req, 0, sizeof(request));
+                client_req.header_count = 0;
+                client_req.body_len = 0;
+
+                http_status parse_res = HTTP_OK;
+                parsing_state parse_state = PARSING_METHOD;
+                size_t total_bytes_parsed = 0;
+                size_t pos = 0;
+                ssize_t bytes_received = 0;
+
+                while(!parsing_complete){   // Parsing loop 
+                    // trying to parse remaining data
+                    parse_res = parse_raw_request(raw_request_buf, &client_req, 
+                        bytes_received, &total_bytes_parsed, &pos,
+                        &parsing_complete, &parse_state);
+
+                    if(parse_res != HTTP_OK || parsing_complete) break;
+                    
+                    // waiting for new data if parsing didn't work 
+                    char raw_request[MAX_REQUEST_LEN];
+                    memset(raw_request, 0, sizeof(raw_request));
+                    bytes_received = recv(client_fd, raw_request, MAX_REQUEST_LEN, 0);
+
+                    if(bytes_received == 0){    // Connection closed 
+                        if (!cfg_infos->quiet){
+                            printf("[INFO] server : peer closed its half side of the connection");
+                        } 
+                        exit_status = 0;
+                        peer_closed = true;
+                        break;
+                    }
+                    if(bytes_received == -1){   // Error during reception 
+                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                            parse_res = HTTP_REQUEST_TIMEOUT;
+                            break;
+                        }
+                        else {
+                            perror("server :  recv");
+                        } 
+                        exit_status = 1;
+                        break;
+                    }
+
+                    if (write_string_in_r_buffer(raw_request_buf, raw_request, bytes_received) != 0){
+                        exit_status = 1;
+                        break;
+                    }
+                }
+
+
+                if(peer_closed || (!parsing_complete && parse_res == HTTP_OK) 
+                || (!parsing_complete && parse_res == HTTP_REQUEST_TIMEOUT)){
+                    break;
+                }
+
+            
+                // testing request
+                if(!cfg_infos->quiet){
+                    printf("[INFO] parsed request (peer_closed=%d, parsing_complete=%d, parse_res=%d) : \n",
+                        peer_closed, parsing_complete, parse_res);
+                    print_request(&client_req);
+                }
            
 
-            // Process
-            response serv_resp;
-            memset(&serv_resp, 0, sizeof(response));
-            if (route_request(cfg_infos, &client_req, &serv_resp, parse_res) != HTTP_OK){
-                fprintf(stderr, "[ERROR] Server error while routing request\n");
-                close(client_fd);
-                exit(1);
-            };
+                //  ----- Process request --------------------------------------------
+                response serv_resp;
+                memset(&serv_resp, 0, sizeof(response));
+                if (route_request(cfg_infos, &client_req, &serv_resp, parse_res) != HTTP_OK){
+                    fprintf(stderr, "[ERROR] Server error while routing request\n");
+                    exit_status = 1;
+                    break;
+                };
             
-            // testing response
-            if(!cfg_infos->quiet){
-                printf("[INFO] processed request into response :\n");
-                print_reponse(&serv_resp);
-            }
+                // testing response
+                if(!cfg_infos->quiet){
+                    printf("[INFO] processed request into response :\n");
+                    print_reponse(&serv_resp);
+                }
 
-            // Respond
-            char *raw_response = build_text_response(cfg_infos, &serv_resp);
-            if(!raw_response){
-                fprintf(stderr, "[ERROR] Server couldn't build text response\n");
-                close(client_fd);
-                exit(1);
-            }
+                //  ----- Respond --------------------------------------------------
+                size_t raw_response_len = 0;
+                char *raw_response = build_text_response(cfg_infos, &serv_resp, &raw_response_len);
+                if(!raw_response){
+                    fprintf(stderr, "[ERROR] Server couldn't build text response\n");
+                    exit_status = 1;
+                    break;
+                }
 
-            if(cfg_infos->verbose){
-                printf("[DEBUG] sending raw response\n");
-                printf("%s\n", raw_response);
-            }
+                if(cfg_infos->verbose){
+                    printf("[DEBUG] sending raw response\n");
+                    printf("%s\n", raw_response);
+                }
 
-            int send_res = send_all(client_fd, raw_response, strlen(raw_response));
+                
+                int send_res = send_all(client_fd, raw_response, raw_response_len);
+                free(raw_response);
+
+                if(send_res == -1){
+                    perror("server : send");
+                    exit_status = 1;
+                    break;
+                }
+
+                // Exits if connection is close
+                if(strcasecmp(serv_resp.connection_type, "close") == 0){
+                    break;
+                }
+            }   // Exit client keep-alive loop 
             
             if(!cfg_infos->quiet) printf("[INFO] closing connection\n");
-            free(raw_response);
+            free_ring_buffer(raw_request_buf);
             close(client_fd);
-
-            if(send_res == -1){
-                perror("server : send");
-                exit(1);
-            }
-            
-            exit(0);
+            exit(exit_status);
         }
 
+        // Server parent process
         close(client_fd);
     }
 }

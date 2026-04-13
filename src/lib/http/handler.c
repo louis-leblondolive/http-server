@@ -66,6 +66,9 @@ http_status handle_error(response *serv_resp, http_status err_status){
 
     if (add_header(serv_resp, "Content-Type", "text/html") != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
+    if (add_header(serv_resp, "Connection", "close") != HTTP_OK) return HTTP_INTERNAL_ERROR;
+    strlcpy(serv_resp->connection_type, "close", MAX_HEADER_VALUE_SIZE);
+
     if(err_status != HTTP_NO_CONTENT && err_status != HTTP_NOT_MODIFIED
         && reason_code->code / 100 != 1){
     
@@ -124,6 +127,14 @@ http_status handle_get(request *client_req, response *serv_resp, bool head_only)
     struct tm *tm_info = gmtime(&st.st_mtime);
     strftime(last_modified, sizeof(last_modified), "%a, %d %b %Y %H:%M:%S GMT", tm_info);
     cache_res = add_header(serv_resp, "Last-Modified", last_modified);
+    if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
+
+    if(strcasecmp(client_req->connection_type, "keep-alive") == 0){
+        strlcpy(serv_resp->connection_type, "keep-alive", MAX_HEADER_VALUE_SIZE);
+    } else {
+        strlcpy(serv_resp->connection_type, "close", MAX_HEADER_VALUE_SIZE);
+    }
+    cache_res = add_header(serv_resp, "Connection", serv_resp->connection_type);
     if(cache_res != HTTP_OK) return handle_error(serv_resp, cache_res);
 
     cache_res = init_response_content_length(serv_resp);
