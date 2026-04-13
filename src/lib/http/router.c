@@ -2,7 +2,7 @@
 
 void assign_real_path(request *client_req){
     if(strcmp(client_req->path, "/") == 0){
-        strlcpy(client_req->path, "www/index.html", MAX_PATH_LEN);
+        strlcpy(client_req->path, DEFAULT_PATH, MAX_PATH_LEN);
     } else {
         char new_path[MAX_PATH_LEN];
         snprintf(new_path, MAX_PATH_LEN, "www/%s", client_req->path);
