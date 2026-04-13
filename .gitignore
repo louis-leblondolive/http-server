@@ -1,7 +1,14 @@
+# Miscellanous 
 .DS_Store
 .vscode
 /build
 /obj
+
+# Python 
+test/.venv
+test/__pycache__/
+*.pyc
+*.pyo
 
 # Prerequisites
 *.d
