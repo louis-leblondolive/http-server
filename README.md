@@ -33,7 +33,7 @@ www/
 ├── index.html
 └── style.css
 ```
-They will be accessible at `http://localhost:8080/index.html`, `http://localhost:8080/style.css`, etc.
+They will be accessible at `http://localhost:3490/index.html`, `http://localhost:3490/style.css`, etc.
 
 
 ## Build
