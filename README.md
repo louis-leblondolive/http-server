@@ -11,6 +11,7 @@ A simple HTTP server built in C from scratch.
 ## Main Features
 - HTTP/1.1 support (GET, HEAD, OPTIONS)
 - Request parsing and response generation with proper headers
+- keep-alive connection supported 
 - Static file serving (HTML, CSS, JS, Images...)
 - Standard status codes (200, 404, 500...)
 - Configuration file support (port, backlog, request maximal size...)
