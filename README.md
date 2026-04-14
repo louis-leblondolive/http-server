@@ -93,7 +93,7 @@ stateDiagram-v2
 To ensure 100% uptime and clean resource management, the server implements:
 
 - `SA_RESTART` **flags** : Prevents system calls (`accept`, `read`) from being interrupted by internal signals.
-- ***Atomic Signal Handlers**: Uses a non-blocking `waitpid` loop to reap child processes, preventing "zombie" accumulation.
+- **Atomic Signal Handlers**: Uses a non-blocking `waitpid` loop to reap child processes, preventing "zombie" accumulation.
 - `errno` **Preservation**: Careful restoration of `errno` within handlers to avoid corruption of the main thread's state.
 
 ### Security & Sanitization
