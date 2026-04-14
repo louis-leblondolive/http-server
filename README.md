@@ -67,11 +67,12 @@ stateDiagram-v2
     [*] --> PARSING_METHOD
     PARSING_METHOD --> PARSING_PATH : space found
     PARSING_PATH --> PARSING_VERSION : space found
-    PARSING_VERSION --> EXPECTING_LF : \r\n found
-    EXPECTING_LF --> PARSING_HEADER_KEY : char found
+    PARSING_VERSION --> EXPECTING_LF : space found
+    EXPECTING_LF --> PARSING_NEW_LINE : '\n’ found
+    PARSING_NEW_LINE --> EXPECTING_FINAL_LF : '\r' found
+    PARSING_NEW_LINE --> PARSING_HEADER_KEY : char found
     PARSING_HEADER_KEY --> PARSING_HEADER_VALUE : ':' found
-    PARSING_HEADER_VALUE --> EXPECTING_LF : \r\n found
-    PARSING_HEADER_VALUE --> EXPECTING_FINAL_LF : double \r\n
+    PARSING_HEADER_VALUE --> EXPECTING_LF : \r found
     EXPECTING_FINAL_LF --> PARSING_BODY : body exists
     PARSING_BODY --> END_PARSING : Content-Length reached
     END_PARSING --> [*]
