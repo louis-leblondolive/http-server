@@ -36,17 +36,26 @@ www/
 They will be accessible at `http://localhost:3490/index.html`, `http://localhost:3490/style.css`, etc.
 
 
-## Build
+## Build and Run 
 
 ### Prerequisites
 - macOS (see [Important] notice above)
 - `clang` or `gcc`
 - `make`
 
+### Installation 
+```bash
+git clone https://github.com/louis-leblondolive/http-server.git
+cd http-server
+```
+
 ### Compile
 ```bash
 make
 ```
+
+> [!TIP]
+> You can edit `src/config.h` before building to configure the port, backlog, etc.
 
 ### Run
 ```bash
@@ -54,7 +63,8 @@ make
 ```
 
 > [!TIP]
-> You can edit `src/config.h` before building to configure the port, backlog, etc.
+> Use the verbose mode (`-v`) to display debug information or the quiet mode (`-q`) to silence logs.
+> (Colors supported). 
 
 ## Technical Deep Dive
 
