@@ -7,17 +7,18 @@ int setup_server(void){
     int getaddr_rv;
     int yes = 1;
 
+    // --------- Building server address information --------------------------------
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
+    hints.ai_flags = AI_PASSIVE;        
 
     if ((getaddr_rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0){
-        fprintf(stderr, "%s\n", gai_strerror(getaddr_rv));
+        print_error("%s\n", gai_strerror(getaddr_rv));
         return -1;
     }
 
+    // --------- Initializing and binding a socket -----------------------------------
     for (p = servinfo; p != NULL; p = p->ai_next){
         
         if((sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1){
@@ -42,7 +43,7 @@ int setup_server(void){
     freeaddrinfo(servinfo);
 
     if(p == NULL){
-        fprintf(stderr, "server : failed to bind\n");
+        print_error("server : failed to bind\n");
         return -1;
     }
 

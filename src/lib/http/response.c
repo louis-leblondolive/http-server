@@ -70,18 +70,6 @@ const http_reason_code *get_http_reason(http_status status){
 }
 
 
-void print_reponse(response *r){
-    printf("%s %s %s\n", r->version, r->code, r->reason);
-    for (int i = 0; i < r->header_count; i++)
-    {
-        printf("%s: %s\n", r->headers[i].key, r->headers[i].value);
-    }
-    printf("\n");
-    printf("%s\n", r->body);
-    printf("\n");
-}
-
-
 void reset_response(response *serv_resp){
    memset(serv_resp, 0, sizeof(response));
 }
@@ -182,7 +170,7 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *
         cursor++;
     }
 
-    if(cfg_infos->verbose) printf("[DEBUG] response - done writing status\n");
+    if(cfg_infos->verbose) print_debug("Response - done writing status\n");
     
     for (int h = 0; h < serv_resp->header_count; h++){
         
@@ -196,7 +184,7 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *
         }
     }
     
-    if(cfg_infos->verbose) printf("[DEBUG] response - done writing headers\n");
+    if(cfg_infos->verbose) print_debug("Response - done writing headers\n");
 
     text_response[cursor] = '\r';
     cursor ++;
@@ -208,7 +196,7 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *
         cursor++;
     }
 
-    if(cfg_infos->verbose) printf("[DEBUG] response - done writing body\n");
+    if(cfg_infos->verbose) print_debug("Response - done writing body\n");
 
     text_response[cursor] = '\0';
     

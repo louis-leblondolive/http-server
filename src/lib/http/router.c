@@ -1,6 +1,11 @@
 #include "router.h"
 
-void assign_real_path(request *client_req){
+/**
+ * @brief Secures the path by adding root directory www/ as a prefix
+ * Replaces root "/" with the default path 
+ */
+static void assign_real_path(request *client_req){
+
     if(strcmp(client_req->path, "/") == 0){
         strlcpy(client_req->path, DEFAULT_PATH, MAX_PATH_LEN);
     } else {
@@ -10,7 +15,11 @@ void assign_real_path(request *client_req){
     }
 }
 
-bool path_is_valid(char *path){
+/**
+ * @brief Checks if path is only made of allowed characters 
+ */
+static bool path_is_valid(char *path){
+
     for(int i = 0; path[i] != '\0'; i++){
         char c = path[i];
         bool is_valid = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') 
@@ -21,7 +30,11 @@ bool path_is_valid(char *path){
     return true;
 }
 
-bool file_is_reachable(char *path){
+/**
+ * @brief Checks if file is a descendant of the www/ directory to 
+ *  avoid path traversal 
+ */
+static bool file_access_allowed(char *path){
 
     char absolute_path[MAX_PATH_LEN]; 
     if(getcwd(absolute_path, MAX_PATH_LEN - 4) == NULL) return false;
@@ -37,18 +50,18 @@ bool file_is_reachable(char *path){
     return strncmp(absolute_path, resolved_path, strlen(absolute_path)) == 0;
 }
 
+/** 
+ * @brief Checks if request content is correct
+ * @return HTTP_OK if request content is valid, corresponding http_status otherwise 
+ */
+static http_status check_request(request *client_req){
 
-http_status check_request(request *client_req){
 
-    // Checking request line
-        // checking method
+    // -------  Checking request status line -------------------------------------
     if(strlen(client_req->method) == 0) return HTTP_BAD_REQUEST;
     
-        // checking path 
-        
-    // syntax is checked before assigning real path
-    // path traversal protection 
-    if(!file_is_reachable(client_req->path)) return HTTP_FORBIDDEN; 
+    
+    if(!file_access_allowed(client_req->path)) return HTTP_FORBIDDEN; 
 
         // checking version 
     int maj = 0, min = 0;
@@ -56,7 +69,7 @@ http_status check_request(request *client_req){
     if(maj != 1 || min != 1) return HTTP_VERSION_NOT_SUPPORTED;
 
 
-    // Checking headers
+    // ------ Checking headers -----------------------------------------------------
     bool content_length_exists = false; 
     bool host_exists = false;
 
@@ -108,31 +121,37 @@ http_status check_request(request *client_req){
 http_status route_request(config_infos *cfg_infos, request *client_req, 
     response *serv_resp, http_status error_flag){
 
-    if(cfg_infos->verbose) printf("[DEBUG] routing request\n");
-   
-    // Checking request 
-    if(error_flag != HTTP_OK){
+    
+    // ------ Checking request ----------------------------------------------------
+    if(cfg_infos->verbose) print_debug("Checking request\n");
+
+    // 1 - Check for error during parsing
+    if(error_flag != HTTP_OK){                                          
         http_status handle_res = handle_error(serv_resp, error_flag);
         return handle_res;
     }
 
-    if(strlen(client_req->path) == 0 || client_req->path[0] != '/' 
-        || !path_is_valid(client_req->path)){
+    // 2 - Check path syntax
+    if(strlen(client_req->path) == 0 || client_req->path[0] != '/'     
+        || !path_is_valid(client_req->path)){                           
 
         http_status handle_res = handle_error(serv_resp, HTTP_BAD_REQUEST);
         return handle_res;
-    }   // need to check path syntax before assigning real path 
+    }   
 
+    // 3 - Preparing local path
     assign_real_path(client_req);
 
-    http_status check_res = check_request(client_req);
+    // 4 - Request content validation (HTTP Logic and Headers)
+    http_status check_res = check_request(client_req);       
     if(check_res != HTTP_OK){
         http_status handle_res = handle_error(serv_resp, check_res);
         return handle_res;
     }
 
 
-    // Routing request 
+    // ------ Routing request ----------------------------------------------------
+    if(cfg_infos->verbose) print_debug("Request checked, routing request\n");
     if(strcmp(client_req->method, "GET") == 0){            // GET
 
         http_status handle_res = handle_get(client_req, serv_resp, false);
@@ -149,7 +168,7 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
         return handle_res;
     } 
 
-    else {
+    else {                                                // Base case 
         http_status handle_res = handle_error(serv_resp, HTTP_NOT_IMPLEMENTED);
         return handle_res;
     }

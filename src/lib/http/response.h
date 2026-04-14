@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "structures.h"
+#include "printer.h"
 
 typedef struct HTTP_Reason_Code {
     int code;
@@ -15,7 +16,6 @@ typedef struct HTTP_Reason_Code {
 
 
 const http_reason_code *get_http_reason(http_status status);
-void print_reponse(response *r);
 void reset_response(response *serv_resp);
 http_status add_header(response *serv_resp, char *key, char *value);
 http_status init_response_status(response *serv_resp, http_status status);

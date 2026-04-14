@@ -1,16 +1,6 @@
 #include "parser.h"
 
 
-void print_request(request *r){
-    printf("%s %s %s\n", r->method, r->path, r->version);
-    for (int i = 0; i < r->header_count; i++){
-        printf("%s: %s\n", r->headers[i].key, r->headers[i].value);
-    }
-    printf("\n");
-    printf("%s\n", r->body);
-}
-
-
 http_status parse_raw_request(r_buffer *raw_request_buf, request *parsed_request, 
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
                             bool *parsing_complete, parsing_state *parse_state){
@@ -20,6 +10,7 @@ http_status parse_raw_request(r_buffer *raw_request_buf, request *parsed_request
 
     while(local_parse_counter < bytes_received){
 
+        // Protecting against infinite requests 
         if (*total_bytes_parsed >= MAX_REQUEST_LEN) return HTTP_BAD_REQUEST;
 
         if(read_from_r_buffer(raw_request_buf, &cur_char) != 0) return HTTP_BAD_REQUEST;
@@ -186,7 +177,8 @@ http_status parse_raw_request(r_buffer *raw_request_buf, request *parsed_request
                 
                 if(cur_char != '\n') return HTTP_BAD_REQUEST;
 
-                // Assigning header values to corresponding request fields 
+                // Double end of line (\r\n\r\n) has been found 
+                // Assigning crucial header values to corresponding request fields 
                 for (int i = 0; i < parsed_request->header_count; i++){
                     header hd = parsed_request->headers[i];
         
@@ -212,19 +204,18 @@ http_status parse_raw_request(r_buffer *raw_request_buf, request *parsed_request
             
 
             case PARSING_BODY:
-                if(*pos >= MAX_BODY_LEN) return HTTP_REQUEST_ENTITY_TOO_LARGE;
+                if (*pos >= MAX_BODY_LEN - 1) return HTTP_REQUEST_ENTITY_TOO_LARGE;
 
-                if(*pos >= parsed_request->body_len){
-                    parsed_request->body[*pos] = '\0';
+                parsed_request->body[*pos] = cur_char;
+                (*pos)++;
+
+                if (*pos >= parsed_request->body_len) {
+                    parsed_request->body[*pos] = '\0'; 
                     *parse_state = END_PARSING;
-                }
-                else {
-                    parsed_request->body[*pos] = cur_char;
-                    (*pos) ++;
                 }
                 break;
 
-
+                
             case END_PARSING:
                 *parsing_complete = true;
                 return HTTP_OK;
