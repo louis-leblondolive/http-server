@@ -1,7 +1,7 @@
 #include "router.h"
 
 /**
- * @brief Secures the path by adding root directory www/ as a prefix
+ * @brief Secures the path by adding root directory www as a prefix
  * Replaces root "/" with the default path 
  */
 static void assign_real_path(request *client_req){
@@ -10,13 +10,14 @@ static void assign_real_path(request *client_req){
         strlcpy(client_req->path, DEFAULT_PATH, MAX_PATH_LEN);
     } else {
         char new_path[MAX_PATH_LEN];
-        snprintf(new_path, MAX_PATH_LEN, "www/%s", client_req->path);
+        snprintf(new_path, MAX_PATH_LEN, "www%s", client_req->path);
         strlcpy(client_req->path, new_path, MAX_PATH_LEN);
     }
 }
 
 /**
  * @brief Checks if path is only made of allowed characters 
+ * @param path The path contained in the client request 
  */
 static bool path_is_valid(char *path){
 
@@ -31,8 +32,18 @@ static bool path_is_valid(char *path){
 }
 
 /**
+ * @brief Checks if file pointed to by path exists.
+ * @param path The local path to the file (including www prefix)
+ */
+static bool file_exists(char *path){
+
+    return (access(path, F_OK) == 0) ;
+}
+
+/**
  * @brief Checks if file is a descendant of the www/ directory to 
  *  avoid path traversal 
+ * @param path The local path to the file (including www prefix)
  */
 static bool file_access_allowed(char *path){
 
@@ -53,6 +64,7 @@ static bool file_access_allowed(char *path){
 /** 
  * @brief Checks if request content is correct
  * @return HTTP_OK if request content is valid, corresponding http_status otherwise 
+ * @note Local path (including www prefix) must have been assigned to client request before calling
  */
 static http_status check_request(request *client_req){
 
@@ -60,7 +72,15 @@ static http_status check_request(request *client_req){
     // -------  Checking request status line -------------------------------------
     if(strlen(client_req->method) == 0) return HTTP_BAD_REQUEST;
     
-    
+        // Checking path 
+        // Assuming that prefix "www" has been added
+    if(strlen(client_req->path) <= 3 || client_req->path[3] != '/'     
+        || !path_is_valid(client_req->path)){                           
+
+        return HTTP_BAD_REQUEST;
+    }   
+
+    if(!file_exists(client_req->path)) return HTTP_NOT_FOUND;
     if(!file_access_allowed(client_req->path)) return HTTP_FORBIDDEN; 
 
         // checking version 
@@ -125,24 +145,17 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
     // ------ Checking request ----------------------------------------------------
     if(cfg_infos->verbose) print_debug("Checking request\n");
 
-    // 1 - Check for error during parsing
+    // Check for error during parsing
     if(error_flag != HTTP_OK){                                          
         http_status handle_res = handle_error(serv_resp, error_flag);
         return handle_res;
     }
 
-    // 2 - Check path syntax
-    if(strlen(client_req->path) == 0 || client_req->path[0] != '/'     
-        || !path_is_valid(client_req->path)){                           
-
-        http_status handle_res = handle_error(serv_resp, HTTP_BAD_REQUEST);
-        return handle_res;
-    }   
-
-    // 3 - Preparing local path
+    // Preparing local path 
     assign_real_path(client_req);
+    if(cfg_infos->verbose) print_debug("Routing - Assigned local path %s\n", client_req->path);
 
-    // 4 - Request content validation (HTTP Logic and Headers)
+    // Request content validation (HTTP Logic and Headers)
     http_status check_res = check_request(client_req);       
     if(check_res != HTTP_OK){
         http_status handle_res = handle_error(serv_resp, check_res);
