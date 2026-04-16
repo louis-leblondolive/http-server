@@ -90,7 +90,7 @@ void listener(config_infos *cfg_infos, int sock_fd){
                 exit(1);
             }
 
-            r_buffer *raw_request_buf = init_ring_buffer(2 * MAX_REQUEST_LEN + 1);
+            r_buffer *raw_request_buf = init_ring_buffer(2 * MAX_REQUEST_LEN);
 
             while(1){   // Client main loop 
 
@@ -104,27 +104,22 @@ void listener(config_infos *cfg_infos, int sock_fd){
                 client_req.body_len = 0;
 
                 http_status parse_res = HTTP_OK;
-                parsing_state parse_state = PARSING_METHOD;
+                parsing_request_state parse_state = REQ_PARSING_METHOD;
                 size_t total_bytes_parsed = 0;
                 size_t pos = 0;
                 ssize_t bytes_received = 0;
 
-                while(!parsing_complete){   // Parsing loop 
-                    // trying to parse remaining data
-                    parse_res = parse_raw_request(raw_request_buf, &client_req, 
-                        bytes_received, &total_bytes_parsed, &pos,
-                        &parsing_complete, &parse_state);
+                char raw_request[MAX_REQUEST_LEN];
+                memset(raw_request, 0, sizeof(raw_request));
 
-                    if(parse_res != HTTP_OK || parsing_complete) break;
+                while(!parsing_complete){   // Parsing loop 
                     
-                    // waiting for new data if parsing didn't work 
-                    char raw_request[MAX_REQUEST_LEN];
-                    memset(raw_request, 0, sizeof(raw_request));
+                    // loading new data 
                     bytes_received = recv(client_fd, raw_request, MAX_REQUEST_LEN, 0);
 
                     if(bytes_received == 0){    // Connection closed 
                         if (!cfg_infos->quiet){
-                            print_info("Server : peer closed its half side of the connection");
+                            print_info("Server : peer closed its half side of the connection\n");
                         } 
                         exit_status = 0;
                         peer_closed = true;
@@ -133,12 +128,12 @@ void listener(config_infos *cfg_infos, int sock_fd){
                     if(bytes_received == -1){   // Error during reception 
                         if (errno == EAGAIN || errno == EWOULDBLOCK) {
                             parse_res = HTTP_REQUEST_TIMEOUT;
-                            break;
+                            exit_status = 0;
                         }
                         else {
                             perror("server :  recv");
+                            exit_status = 1;
                         } 
-                        exit_status = 1;
                         break;
                     }
 
@@ -147,14 +142,24 @@ void listener(config_infos *cfg_infos, int sock_fd){
                         exit_status = 1;
                         break;
                     }
+
+                    // trying to parse remaining data
+                    parse_res = parse_raw_request(cfg_infos, raw_request_buf, &client_req, 
+                        bytes_received, &total_bytes_parsed, &pos,
+                        &parsing_complete, &parse_state);
+
+                    if(parse_res != HTTP_OK || parsing_complete) break;
                 }
 
-                // Client communication interuption during data reception 
-                if(peer_closed || (!parsing_complete && parse_res == HTTP_OK) 
-                || (!parsing_complete && parse_res == HTTP_REQUEST_TIMEOUT)){
+                if(peer_closed){
+                    print_debug("Client communication interuption during data reception\n");
                     break;
                 }   
 
+                if(exit_status == 1){
+                    print_debug("Error during data reception\n");
+                    break;
+                }
             
                 // Displaying request
                 if(!cfg_infos->quiet){
@@ -176,7 +181,7 @@ void listener(config_infos *cfg_infos, int sock_fd){
                 // Displaying response
                 if(!cfg_infos->quiet){
                     print_info("Processed request into response :\n");
-                    print_reponse(&serv_resp);
+                    print_response(&serv_resp);
                 }
 
                 //  ----- Respond --------------------------------------------------

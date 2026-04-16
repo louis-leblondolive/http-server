@@ -48,7 +48,7 @@ void print_request(request *r){
 }
 
 
-void print_reponse(response *r){
+void print_response(response *r){
     printf("%s %s %s\n", r->version, r->code, r->reason);
     for (int i = 0; i < r->header_count; i++)
     {

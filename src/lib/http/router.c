@@ -68,20 +68,22 @@ static bool file_access_allowed(char *path){
  */
 static http_status check_request(request *client_req){
 
+    char clean_path[MAX_PATH_LEN];
+    sscanf(client_req->path, "%[^?]", clean_path); // Getting rid of query string for get cgi-requests
 
     // -------  Checking request status line -------------------------------------
     if(strlen(client_req->method) == 0) return HTTP_BAD_REQUEST;
     
         // Checking path 
         // Assuming that prefix "www" has been added
-    if(strlen(client_req->path) <= 3 || client_req->path[3] != '/'     
-        || !path_is_valid(client_req->path)){                           
+    if(strlen(clean_path) <= 3 || clean_path[3] != '/'     
+        || !path_is_valid(clean_path)){                           
 
         return HTTP_BAD_REQUEST;
     }   
 
-    if(!file_exists(client_req->path)) return HTTP_NOT_FOUND;
-    if(!file_access_allowed(client_req->path)) return HTTP_FORBIDDEN; 
+    if(!file_exists(clean_path)) return HTTP_NOT_FOUND;
+    if(!file_access_allowed(clean_path)) return HTTP_FORBIDDEN; 
 
         // checking version 
     int maj = 0, min = 0;
@@ -120,7 +122,7 @@ static http_status check_request(request *client_req){
             time_t client_req_modif_time = timegm(&tm_client_rq);
 
             struct stat st;
-            if(stat(client_req->path, &st) == -1){
+            if(stat(clean_path, &st) == -1){
                 return HTTP_NOT_FOUND;
             }
 
@@ -147,7 +149,7 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
 
     // Check for error during parsing
     if(error_flag != HTTP_OK){                                          
-        http_status handle_res = handle_error(serv_resp, error_flag);
+        http_status handle_res = handle_error(cfg_infos, serv_resp, error_flag);
         return handle_res;
     }
 
@@ -158,31 +160,42 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
     // Request content validation (HTTP Logic and Headers)
     http_status check_res = check_request(client_req);       
     if(check_res != HTTP_OK){
-        http_status handle_res = handle_error(serv_resp, check_res);
+        http_status handle_res = handle_error(cfg_infos, serv_resp, check_res);
         return handle_res;
     }
 
 
     // ------ Routing request ----------------------------------------------------
     if(cfg_infos->verbose) print_debug("Request checked, routing request\n");
-    if(strcmp(client_req->method, "GET") == 0){            // GET
 
-        http_status handle_res = handle_get(client_req, serv_resp, false);
+    if(strncmp(client_req->path, "www/cgi-bin/", 12) == 0){     // Using CGI
+
+        http_status handle_res = handle_cgi(cfg_infos, client_req, serv_resp);
+        return handle_res;
+    }
+    else if(strcmp(client_req->method, "GET") == 0){            // GET
+
+        http_status handle_res = handle_get(cfg_infos, client_req, serv_resp, false);
         return handle_res;
     } 
     else if(strcmp(client_req->method, "HEAD") == 0) {    // HEAD 
 
-        http_status handle_res = handle_get(client_req, serv_resp, true);
+        http_status handle_res = handle_get(cfg_infos, client_req, serv_resp, true);
         return handle_res;
     }
     else if(strcmp(client_req->method, "OPTIONS") == 0) { // OPTIONS
 
-        http_status handle_res = handle_options(serv_resp);
+        http_status handle_res = handle_options(cfg_infos, serv_resp);
         return handle_res;
     } 
+    else if(strcmp(client_req->method, "POST") == 0) {  // POST
+
+        // wrong use case for POST, only implemented for cgi use 
+        return HTTP_METHOD_NOT_ALLOWED;
+    }
 
     else {                                                // Base case 
-        http_status handle_res = handle_error(serv_resp, HTTP_NOT_IMPLEMENTED);
+        http_status handle_res = handle_error(cfg_infos, serv_resp, HTTP_NOT_IMPLEMENTED);
         return handle_res;
     }
 

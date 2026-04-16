@@ -36,6 +36,33 @@
       <h2>Heure</h2>
       <p id="clock">--:--:--</p>
     </section>
+
+    <section class="card">
+      <h2>Exécution CGI - POST</h2>
+      <form action="/cgi-bin/exec.py" method="POST">
+        <select name="command">
+          <option value="date">date</option>
+          <option value="uptime">uptime</option>
+          <option value="whoami">whoami</option>
+        </select>
+        <button type="submit">Exécuter</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Exécution CGI — GET</h2>
+      <p>Infos système en lecture directe :</p>
+      <div class="cgi-get">
+        <select id="get-command">
+          <option value="date">date</option>
+          <option value="uptime">uptime</option>
+          <option value="whoami">whoami</option>
+        </select>
+        <button onclick="window.location.href='/cgi-bin/exec.py?command='+document.getElementById('get-command').value">
+          Consulter
+        </button>
+      </div>
+    </section>
   </main>
 
   <footer>

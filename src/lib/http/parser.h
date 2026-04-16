@@ -8,24 +8,39 @@
 
 #include "structures.h"
 #include "ring_buffer.h"
+#include "config.h"
+#include "printer.h"
 
 
-typedef enum Parsing_State {
-    PARSING_METHOD, 
-    PARSING_METHOD_SEPARATOR,
-    PARSING_PATH, 
-    PARSING_PATH_SEPARATOR,
-    PARSING_VERSION, 
-    PARSING_HEADER_KEY,
-    PARSING_HEADER_KEY_SEPARATOR,
-    PARSING_HEADER_VALUE, 
-    PARSING_BODY,
-    PARSING_NEW_LINE,
-    EXPECTING_LF,
-    EXPECTING_FINAL_LF, 
-    END_PARSING
+typedef enum Parsing_Request_State {
+    REQ_PARSING_METHOD, 
+    REQ_PARSING_METHOD_SEPARATOR,
+    REQ_PARSING_PATH, 
+    REQ_PARSING_PATH_SEPARATOR,
+    REQ_PARSING_VERSION, 
+    REQ_PARSING_HEADER_KEY,
+    REQ_PARSING_HEADER_KEY_SEPARATOR,
+    REQ_PARSING_HEADER_VALUE, 
+    REQ_PARSING_BODY,
+    REQ_PARSING_NEW_LINE,
+    REQ_EXPECTING_LF,
+    REQ_EXPECTING_FINAL_LF, 
+    REQ_END_PARSING
     
-} parsing_state ; 
+} parsing_request_state ; 
+
+
+typedef enum Parsing_Response_State {
+    RESP_EXPECTING_LF, 
+    RESP_PARSING_NEW_LINE,
+    RESP_PARSING_HEADER_KEY,
+    RESP_PARSING_HEADER_KEY_SEPARATOR,
+    RESP_PARSING_HEADER_VALUE, 
+    RESP_EXPECTING_FINAL_LF,
+    RESP_PARSING_BODY,
+    RESP_END_PARSING
+} parsing_response_state ; 
+
 
 /**
  * @brief Parses an http request from raw text to a filled request structure (see structures.h).
@@ -48,9 +63,16 @@ typedef enum Parsing_State {
  * @note **Crucial**: A return of HTTP_OK does NOT mean the request is ready. 
  * Always check `*parsing_complete` before routing.
  */
-http_status parse_raw_request(r_buffer *raw_request_buf, request *parsed_request, 
+http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf, request *parsed_request, 
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos,
-                            bool *parsing_complete, parsing_state *parse_state);
+                            bool *parsing_complete, parsing_request_state *parse_state);
 
+
+
+
+http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_response_buf, response *parsed_response, 
+                            ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
+                            bool *parsing_complete, parsing_response_state *parse_state, 
+                            bool *has_body_length);
 
 #endif 

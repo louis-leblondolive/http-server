@@ -8,6 +8,7 @@ static const http_reason_code http_400 = {400, "Bad Request"};
 static const http_reason_code http_401 = {401, "Unauthorized"};
 static const http_reason_code http_403 = {403, "Forbidden"};
 static const http_reason_code http_404 = {404, "Not Found"};
+static const http_reason_code http_405 = {405, "Method Not Allowed"};
 static const http_reason_code http_408 = {408, "Request Time-out"};
 static const http_reason_code http_413 = {413, "Request Entity Too Large"};
 static const http_reason_code http_414 = {414, "Request URI Too Long"};
@@ -16,6 +17,7 @@ static const http_reason_code http_418 = {418, "I'm a teapot"};
 static const http_reason_code http_431 = {431, "Request Header Fields Too Large"};
 static const http_reason_code http_500 = {500, "Internal Server Error"};
 static const http_reason_code http_501 = {501, "Not Implemented"};
+static const http_reason_code http_502 = {502, "Bad Gateway"};
 static const http_reason_code http_505 = {505, "HTTP Version Not Supported"};
 static const http_reason_code http_unknown = {0, "Unknown"};
 
@@ -42,6 +44,8 @@ const http_reason_code *get_http_reason(http_status status){
         return &http_403;
     case HTTP_NOT_FOUND:
         return &http_404;
+    case HTTP_METHOD_NOT_ALLOWED:
+        return &http_405;
     case HTTP_REQUEST_TIMEOUT:
         return &http_408;
     case HTTP_REQUEST_ENTITY_TOO_LARGE:
@@ -59,14 +63,41 @@ const http_reason_code *get_http_reason(http_status status){
         return &http_500;
     case HTTP_NOT_IMPLEMENTED:
         return &http_501;
+    case HTTP_BAD_GATEWAY:
+        return &http_502;
     case HTTP_VERSION_NOT_SUPPORTED:
         return &http_505;
 
     default:
         return &http_unknown;
     }
+}
 
 
+http_status get_status_from_code(int code){
+    switch (code)
+    {
+    case 200: return HTTP_OK;
+    case 201: return HTTP_CREATED;
+    case 204: return HTTP_NO_CONTENT;
+    case 304: return HTTP_NOT_MODIFIED;
+    case 400: return HTTP_BAD_REQUEST;
+    case 401: return HTTP_UNAUTHORIZED;
+    case 403: return HTTP_FORBIDDEN;
+    case 404: return HTTP_NOT_FOUND;
+    case 405: return HTTP_METHOD_NOT_ALLOWED;
+    case 408: return HTTP_REQUEST_TIMEOUT;
+    case 413: return HTTP_REQUEST_ENTITY_TOO_LARGE;
+    case 414: return HTTP_URI_TOO_LONG;
+    case 417: return HTTP_EXPECTATION_FAILED;
+    case 418: return HTTP_TEAPOT;
+    case 431: return HTTP_HEADER_TOO_LARGE;
+    case 500: return HTTP_INTERNAL_ERROR;
+    case 501: return HTTP_NOT_IMPLEMENTED;
+    case 502: return HTTP_BAD_GATEWAY;
+    case 505: return HTTP_VERSION_NOT_SUPPORTED;
+    default:  return HTTP_INTERNAL_ERROR;
+    }
 }
 
 
@@ -98,18 +129,23 @@ http_status init_response_status(response *serv_resp, http_status status){
 
     if(strlen(HTTP_VERSION) > MAX_VERSION_LEN) return HTTP_INTERNAL_ERROR;
     strcpy(serv_resp->version, HTTP_VERSION);
-
+    
     const http_reason_code *reason_code = get_http_reason(status);
 
     const char *reason = reason_code->reason;
     if(strlen(reason) > MAX_REASON_LEN) return HTTP_INTERNAL_ERROR;
     strcpy(serv_resp->reason, reason);
 
-    // Adding default headers
     char code_str[16];
     snprintf(code_str, sizeof(code_str), "%d", reason_code->code);
     if(strlen(code_str) > MAX_CODE_LEN) return HTTP_INTERNAL_ERROR;
     strcpy(serv_resp->code, code_str);
+  
+    return HTTP_OK;
+}
+
+
+http_status init_response_default_headers(response *serv_resp){
 
     char date[64];
     time_t now = time(NULL);
@@ -122,6 +158,7 @@ http_status init_response_status(response *serv_resp, http_status status){
     if(add_header(serv_resp, "Server", server_info) != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
     return HTTP_OK;
+
 }
 
 
