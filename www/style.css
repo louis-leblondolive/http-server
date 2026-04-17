@@ -152,6 +152,92 @@ main {
   width: 100%;
 }
 
+/* ── ABOUT SECTION ───────────────────────────────────── */
+.about-section {
+  margin-bottom: 4rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.about-desc {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 1.8rem;
+  max-width: 620px;
+}
+
+.about-desc code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: rgba(255,255,255,0.08);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  color: var(--white);
+}
+
+.about-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.badge {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 999px;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.02em;
+  background: rgba(255,255,255,0.04);
+}
+
+.about-structure {
+  margin-bottom: 2rem;
+}
+
+.structure-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.6rem;
+}
+
+.structure-tree {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 1.2rem 1.4rem;
+  overflow-x: auto;
+}
+
+.about-github-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1.4rem;
+  background: var(--white);
+  color: var(--black);
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: opacity 0.2s;
+}
+
+.about-github-btn:hover {
+  opacity: 0.88;
+}
+
 /* ── CGI SECTION ─────────────────────────────────────── */
 .section-title {
   font-size: 1.8rem;
@@ -254,4 +340,39 @@ footer {
   font-family: var(--mono);
   font-size: 0.7rem;
   color: rgba(255,255,255,0.2);
+}
+
+/* ── REPO SECTION ────────────────────────────────────── */
+.repo-section {
+  margin-top: 2rem;
+}
+
+.repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.4rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  color: var(--white);
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.repo-link:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.25);
+}
+
+.repo-arrow {
+  opacity: 0.5;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.repo-link:hover .repo-arrow {
+  opacity: 1;
+  transform: translate(2px, -2px);
 }

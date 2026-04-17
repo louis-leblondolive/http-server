@@ -29,7 +29,7 @@ async function runCgi() {
   btn.classList.add('loading');
   btn.textContent = '…';
   output.className = 'cgi-output';
-  output.innerHTML = '<span class="cgi-placeholder">Exécution…</span>';
+  output.innerHTML = '<span class="cgi-placeholder">Running…</span>';
 
   const url = '/cgi-bin/exec.py';
   const start = performance.now();
@@ -69,11 +69,11 @@ async function runCgi() {
     }
   } catch (err) {
     output.classList.add('error');
-    output.innerHTML = `<span>Erreur réseau : ${escapeHtml(err.message)}</span>`;
+    output.innerHTML = `<span>Network error: ${escapeHtml(err.message)}</span>`;
   }
 
   btn.classList.remove('loading');
-  btn.textContent = 'Exécuter';
+  btn.textContent = 'Run';
 }
 
 function escapeHtml(str) {
