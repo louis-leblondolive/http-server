@@ -4,63 +4,53 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mon serveur HTTP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1>Mon serveur HTTP</h1>
-    <p class="subtitle">Codé en C, servi à la main</p>
+
+  <header class="topbar">
+    <span class="topbar-title">Mon serveur HTTP</span>
+    <span class="topbar-meta">
+      <span id="clock">--:--:--</span>
+      &nbsp;·&nbsp; HTTP/1.1 &nbsp;·&nbsp; C
+    </span>
   </header>
 
+  <section class="hero">
+    <img src="banner.jpg" alt="Bannière" class="hero-bg">
+    <div class="hero-overlay"></div>
+    <div class="hero-card">
+      <span class="status-dot"></span>
+      <p class="status-label">Serveur en ligne</p>
+      <p class="status-sub">Si tu vois cette page, ton serveur <strong>fonctionne</strong>.</p>
+    </div>
+  </section>
+
   <main>
-    <section class="card">
-      <h2>Statut</h2>
-      <p>Si tu vois cette page, ton serveur <strong>fonctionne</strong>.</p>
-    </section>
+    <section class="cgi-section">
+      <h2 class="section-title">Exécution CGI</h2>
+      <p class="section-desc">Lance une commande système directement depuis le navigateur.</p>
 
-    <section class="card">
-      <h2>Fichiers servis</h2>
-      <ul>
-        <li><a href="/index.html">index.html</a></li>
-        <li><a href="/style.css">style.css</a></li>
-        <li><a href="/app.js">app.js</a></li>
-      </ul>
-    </section>
+      <div class="cgi-controls">
+        <div class="method-tabs">
+          <button class="tab active" data-method="GET">GET</button>
+          <button class="tab" data-method="POST">POST</button>
+        </div>
+        <div class="command-row">
+          <select id="command-select">
+            <option value="date">date</option>
+            <option value="uptime">uptime</option>
+            <option value="whoami">whoami</option>
+          </select>
+          <button id="run-btn" onclick="runCgi()">Exécuter</button>
+        </div>
+      </div>
 
-    <section class="card">
-      <h2>Requête GET</h2>
-      <p>Ce fichier a été servi statiquement depuis <code>www/</code>.</p>
-    </section>
-
-    <section class="card">
-      <h2>Heure</h2>
-      <p id="clock">--:--:--</p>
-    </section>
-
-    <section class="card">
-      <h2>Exécution CGI - POST</h2>
-      <form action="/cgi-bin/exec.py" method="POST">
-        <select name="command">
-          <option value="date">date</option>
-          <option value="uptime">uptime</option>
-          <option value="whoami">whoami</option>
-        </select>
-        <button type="submit">Exécuter</button>
-      </form>
-    </section>
-
-    <section class="card">
-      <h2>Exécution CGI — GET</h2>
-      <p>Infos système en lecture directe :</p>
-      <div class="cgi-get">
-        <select id="get-command">
-          <option value="date">date</option>
-          <option value="uptime">uptime</option>
-          <option value="whoami">whoami</option>
-        </select>
-        <button onclick="window.location.href='/cgi-bin/exec.py?command='+document.getElementById('get-command').value">
-          Consulter
-        </button>
+      <div class="cgi-output" id="cgi-output">
+        <span class="cgi-placeholder">La sortie s'affichera ici…</span>
       </div>
     </section>
   </main>

@@ -44,7 +44,13 @@ void print_request(request *r){
         printf("%s: %s\n", r->headers[i].key, r->headers[i].value);
     }
     printf("\n");
-    printf("%s\n", r->body);
+    if(r->body_len <= 2000){
+        printf("----- Body -----\n");
+        if(strcmp(r->body, "\0") != 0) printf("%s\n", r->body);
+        printf("----- End of Body -----\n");
+    } else {
+        printf("Long body (length > 2000)\n");
+    }
 }
 
 
@@ -55,6 +61,11 @@ void print_response(response *r){
         printf("%s: %s\n", r->headers[i].key, r->headers[i].value);
     }
     printf("\n");
-    printf("%s\n", r->body);
-    printf("\n");
+    if(r->body_len <= 2000){
+        printf("----- Body -----\n");
+        if(strcmp(r->body, "\0") != 0) printf("%s\n", r->body);
+        printf("----- End of Body -----\n");
+    } else {
+        printf("Long body (length > 2000)\n");
+    }
 }

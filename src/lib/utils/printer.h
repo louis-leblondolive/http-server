@@ -7,6 +7,7 @@
 #define RESET        "\033[0m"
 
 #include <stdio.h>
+#include <string.h>
 #include <stdarg.h>
 
 #include <structures.h>
