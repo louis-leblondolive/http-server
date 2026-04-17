@@ -94,7 +94,14 @@ void listener(config_infos *cfg_infos, int sock_fd){
                 memset(raw_request, 0, sizeof(raw_request));
 
                 while(!parsing_complete){   // Parsing loop 
-                    
+
+                    // trying to parse remaining data
+                    parse_res = parse_raw_request(cfg_infos, raw_request_buf, &client_req, 
+                        bytes_received, &total_bytes_parsed, &pos,
+                        &parsing_complete, &parse_state);
+
+                    if(parse_res != HTTP_OK || parsing_complete) break;
+
                     // loading new data 
                     bytes_received = recv(client_fd, raw_request, MAX_REQUEST_LEN, 0);
 
@@ -102,6 +109,9 @@ void listener(config_infos *cfg_infos, int sock_fd){
                         if (!cfg_infos->quiet){
                             print_info("Server : peer closed its half side of the connection\n");
                         } 
+                        if (!parsing_complete && total_bytes_parsed == 0) {
+                            parse_res = HTTP_BAD_REQUEST;  
+                        }
                         exit_status = 0;
                         peer_closed = true;
                         break;
@@ -123,17 +133,10 @@ void listener(config_infos *cfg_infos, int sock_fd){
                         exit_status = 1;
                         break;
                     }
-
-                    // trying to parse remaining data
-                    parse_res = parse_raw_request(cfg_infos, raw_request_buf, &client_req, 
-                        bytes_received, &total_bytes_parsed, &pos,
-                        &parsing_complete, &parse_state);
-
-                    if(parse_res != HTTP_OK || parsing_complete) break;
                 }
 
                 if(peer_closed){
-                    print_debug("Client communication interuption during data reception\n");
+                    if(!cfg_infos->quiet) print_info("Client communication interuption during data reception\n");
                     break;
                 }   
 
@@ -148,10 +151,14 @@ void listener(config_infos *cfg_infos, int sock_fd){
                         peer_closed, parsing_complete, parse_res);
                     print_request(&client_req);
                 }
-           
+                
+                // Reset ring buffer
+                memset(raw_request_buf->buf, 0, raw_request_buf->buf_size);
+                raw_request_buf->read_pos = 0;
+                raw_request_buf->write_pos = 0;
 
                 //  ----- Process request --------------------------------------------
-    
+                
                 if (route_request(cfg_infos, &client_req, parse_res) != 0){
                     print_error("Server error while routing request\n");
                     exit_status = 1;

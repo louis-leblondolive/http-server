@@ -93,7 +93,7 @@ static http_status check_request(request *client_req){
 
     // ------ Checking headers -----------------------------------------------------
     bool content_length_exists = false; 
-    bool host_exists = false;
+    int host_counter = 0;
 
     for (int i = 0; i < client_req->header_count; i++){
 
@@ -104,7 +104,7 @@ static http_status check_request(request *client_req){
         }
 
         if(strcasecmp(hd.key, "Host") == 0 && strlen(hd.value) != 0){   // Check Host
-            host_exists = true;
+            host_counter ++;
         }
 
         if(strcasecmp(hd.key, "Expect") == 0 && strcmp(hd.value, "100-continue") == 0){  // Expect
@@ -133,7 +133,7 @@ static http_status check_request(request *client_req){
     }
     
     if(!content_length_exists && client_req->body_len != 0) return HTTP_BAD_REQUEST;
-    if(!host_exists) return HTTP_BAD_REQUEST;
+    if(host_counter != 1) return HTTP_BAD_REQUEST;
 
     return HTTP_OK;
 }

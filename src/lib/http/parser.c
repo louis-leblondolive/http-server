@@ -23,6 +23,9 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
 
             case REQ_PARSING_METHOD:
 
+                if(cur_char == '\r' || cur_char == '\n')
+                    return HTTP_BAD_REQUEST;
+
                 if(cur_char == ' '){
                     
                     *parse_state = REQ_PARSING_METHOD_SEPARATOR;
@@ -39,6 +42,9 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
 
             case REQ_PARSING_METHOD_SEPARATOR:
                 
+                if(cur_char == '\r' || cur_char == '\n')
+                    return HTTP_BAD_REQUEST;
+
                 if(cur_char == ' ') return HTTP_BAD_REQUEST; 
                 // only one space allowed between method and path 
 
@@ -51,6 +57,9 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
                 
             
             case REQ_PARSING_PATH:
+
+                if(cur_char == '\r' || cur_char == '\n')
+                    return HTTP_BAD_REQUEST;
 
                 if(cur_char == ' '){
 
@@ -67,6 +76,9 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
 
 
             case REQ_PARSING_PATH_SEPARATOR:
+                
+                if(cur_char == '\r' || cur_char == '\n')
+                    return HTTP_BAD_REQUEST;
                 
                 if(cur_char == ' ') return HTTP_BAD_REQUEST; 
                     // only one space allowed between method and path 
@@ -122,6 +134,9 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
             case REQ_PARSING_HEADER_KEY:
                 
                 if(header_count >= MAX_HEADER_NB) return HTTP_BAD_REQUEST;
+
+                if(cur_char == '\r' || cur_char == '\n')
+                    return HTTP_BAD_REQUEST;
     
                 if(cur_char == ':'){
 
@@ -333,7 +348,10 @@ http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_respon
             case RESP_PARSING_HEADER_KEY:
                 
                 if(header_count >= MAX_HEADER_NB) return HTTP_BAD_GATEWAY;
-    
+                
+                if(cur_char == '\r' || cur_char == '\n')
+                    return HTTP_BAD_REQUEST;
+
                 if(cur_char == ':'){
 
                     if(*pos <= 0) return HTTP_BAD_GATEWAY; 
