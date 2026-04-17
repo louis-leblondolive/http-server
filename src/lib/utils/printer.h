@@ -12,10 +12,17 @@
 
 #include <structures.h>
 
+// Prints an error in red 
 void print_error(char *format, ...);
+
+// Prints an info and adds the "[INFO]" beacon
 void print_info(char *format, ...);
+
+// Prints an info and adds the "[DEBUG]" beacon
 void print_debug(char *format, ...);
+
 void print_request(request *r);
+
 void print_response(response_head *r);
 
 #endif

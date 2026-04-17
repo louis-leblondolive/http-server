@@ -12,26 +12,6 @@ static void sigchld_handler(int s){
     errno = saved_errno;    
 }
 
-/**
- * @brief A derivative of the send() function that ensures the messages is sent entirely.
- * @warning Calls to this function will block until all of the message is sent.
- * 
- * @param fd    Destination socket file descriptor. 
- * @param buf   The message to be sent.
- * @param len   Message length.
- * @return      0 upon sucess, -1 otherwise.
- */
-static int send_all(int fd, char *buf, size_t len){
-
-    size_t sent = 0;
-    while(sent < len){
-        ssize_t n = send(fd, (void*)buf + sent, len - sent, 0);
-        if(n == -1) return -1;
-        sent += n;
-    }
-    return 0;
-}
-
 
 void listener(config_infos *cfg_infos, int sock_fd){
 

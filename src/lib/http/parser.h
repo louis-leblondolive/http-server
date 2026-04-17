@@ -50,6 +50,7 @@ typedef enum Parsing_Response_State {
  * 
  * @warning All pointer parameters must be pre-allocated. The caller is responsible for their life cycle.
  * 
+ * @param[in]      cfg_infos           Configuration infos (verbosity).
  * @param[in]      raw_request_buf     Ring buffer containing raw request.
  * @param[in, out] parsed_request      Pointer to the request that is currently being parsed.
  * @param[in]      bytes_received      Number of processable bytes in the buffer.
@@ -69,7 +70,30 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
 
 
 
-
+/**
+ * @brief Parses response from a cgi script, from raw text to a filled response structure (see structures.h).
+ * * The parsing support partial response read, meaning it can be run several times on chunked 
+ * responses. It also supports non HTTP formated outputs (as long as headers keys and values are separated by ':'). 
+ * Parsing completion state is stored in a pointer-referenced boolean, so user must ensure
+ * his request was entirely parsed before proceeding to send response. 
+ * 
+ * @warning All pointer parameters must be pre-allocated. The caller is responsible for their life cycle.
+ * 
+ * @param[in]      cfg_infos              Configuration infos (verbosity).
+ * @param[in]      raw_response_buf       Ring buffer containing raw response.
+ * @param[in, out] parsed_response_head   Pointer to the request that is currently being parsed.
+ * @param[in, out] parsed_resp_body       Pointer to a buffer receiving response body.  
+ * @param[in]      bytes_received         Number of processable bytes in the buffer.
+ * @param[in, out] total_bytes_parsed     Total amount of bytes processed for this request.
+ * @param[in, out] pos                    Current writing position in the active parsing response field.
+ * @param[out]     parsing_complete       A pointer to a boolean indicating parsing completion state. 
+ * @param[in, out] parse_state            Current finite state machine parsing state.
+ * 
+ * @return Returns HTTP_OK if the chunk was parsed without error, or the corresponding 
+ * HTTP error code otherwise. 
+ * @note **Crucial**: A return of HTTP_OK does NOT mean the request is ready. 
+ * Always check `*parsing_complete` before responding.
+ */
 http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_response_buf, 
                             response_head *parsed_response_head, char *parsed_resp_body, 
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 

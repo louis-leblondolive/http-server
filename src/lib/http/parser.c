@@ -263,7 +263,7 @@ http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_respon
 
     while(local_parse_counter < bytes_received){
 
-        // Protecting against infinite requests 
+        // Protecting against infinite responses 
         if (*total_bytes_parsed >= MAX_REQUEST_LEN) return HTTP_BAD_GATEWAY;
 
         if(read_from_r_buffer(raw_response_buf, &cur_char) != 0) return HTTP_BAD_GATEWAY;

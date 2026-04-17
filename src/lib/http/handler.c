@@ -258,7 +258,6 @@ int handle_cgi(config_infos *cfg_infos, request *client_req){
 
         dup2(pipe_in[0], STDIN_FILENO);
         dup2(pipe_out[1], STDOUT_FILENO);
-        //dup2(pipe_out[1], STDERR_FILENO);
 
         close(pipe_in[0]); close(pipe_in[1]);
         close(pipe_out[0]); close(pipe_out[1]);

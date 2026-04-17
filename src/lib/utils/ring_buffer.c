@@ -21,6 +21,7 @@ r_buffer *init_ring_buffer(size_t buf_size){
 
 
 void free_ring_buffer(r_buffer *r_buf){
+    if(!r_buf) return;
     free(r_buf->buf);
     free(r_buf);
     return ;
@@ -28,15 +29,19 @@ void free_ring_buffer(r_buffer *r_buf){
 
 
 bool r_buffer_is_empty(r_buffer *r_buf){
+    if (!r_buf) return true;
     return r_buf->read_pos == r_buf->write_pos;
 }
 
 bool r_buffer_is_full(r_buffer *r_buf){
+    if (!r_buf) return true;
     return (r_buf->write_pos + 1) % r_buf->buf_size == r_buf->read_pos;
 }
 
 
 size_t get_r_buffer_free_space(r_buffer *r_buf){
+
+    if (!r_buf) return 0;
 
     if(r_buf->write_pos >= r_buf->read_pos){
         return (r_buf->buf_size - 1) - (r_buf->write_pos - r_buf->read_pos);
@@ -49,6 +54,9 @@ size_t get_r_buffer_free_space(r_buffer *r_buf){
 
 int read_from_r_buffer(r_buffer *r_buf, char *target){
 
+    if (!r_buf) return -1;
+    if (!target) return -1;
+
     if(r_buffer_is_empty(r_buf)){    // buffer is empty 
         return -1; 
     }
@@ -60,7 +68,9 @@ int read_from_r_buffer(r_buffer *r_buf, char *target){
 }
 
 
-int write_char_in_r_buffer(r_buffer *r_buf, char c){
+static int write_char_in_r_buffer(r_buffer *r_buf, char c){
+
+    if (!r_buf) return -1;
 
     if(r_buffer_is_full(r_buf)){    // buffer is full
         return -1;
@@ -74,6 +84,9 @@ int write_char_in_r_buffer(r_buffer *r_buf, char c){
 
 
 int write_string_in_r_buffer(r_buffer *r_buf, char *s, size_t s_len){
+
+    if (!r_buf) return -1;
+    if (!s) return -1;
 
     if(s_len > get_r_buffer_free_space(r_buf)){
         return -1;

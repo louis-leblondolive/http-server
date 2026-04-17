@@ -105,11 +105,6 @@ http_status get_status_from_code(int code){
 
 // ---------- Response handling ------------------------------------------------
 
-void reset_response(response_head *serv_resp_hd){
-   memset(&serv_resp_hd, 0, sizeof(serv_resp_hd));
-}
-
-
 http_status add_header(response_head *serv_resp_hd, char *key, char *value){
     
     if(serv_resp_hd->header_count >= MAX_HEADER_NB 
@@ -183,9 +178,19 @@ http_status init_response_content_length(response_head *serv_resp_hd){
 }
 
 
-char *build_text_response_head(config_infos *cfg_infos, response_head *serv_resp_hd, size_t *raw_response_len){
-    // assume that response length has been tested and is the right size
-    // returns a pointer : free must be used after usage 
+// -------------- Send logic ---------------------------------------------------------------------
+/**
+ * @brief Generates the raw text associated to a response head.
+ * @param cfg_infos         Pointer to configuration infos (verbosity).
+ * @param serv_resp_hd      Pointer to the server head response used for the generation.
+ * @param raw_response_len  Pointer where to assign raw response length
+ * @return The text response, terminated by a '\0' (not counted in raw_response_len)
+ * 
+ * @warning This function returns a pointer, user must free it after usage. 
+ * @note This function assumes that response length has been tested and is the right size.
+ */
+static char *build_text_response_head(config_infos *cfg_infos, response_head *serv_resp_hd, 
+    size_t *raw_response_len){
     
     size_t status_len = strlen(serv_resp_hd->version) + strlen(serv_resp_hd->code) + strlen(serv_resp_hd->reason) + 4;
     size_t headers_len = 0;
@@ -241,12 +246,9 @@ char *build_text_response_head(config_infos *cfg_infos, response_head *serv_resp
 }
 
 
-// -------------- Send logic ---------------------------------------------------------------------
-
-
 int send_raw_content(config_infos *cfg_infos, char *buf, size_t buf_len){
 
-    print_debug("Sending raw content \n");
+    if(cfg_infos->verbose) print_debug("Sending raw content \n");
 
     size_t sent = 0;
     while(sent < buf_len){
@@ -255,7 +257,7 @@ int send_raw_content(config_infos *cfg_infos, char *buf, size_t buf_len){
         sent += n;
     }
     
-    print_debug("Done sending raw content\n");
+    if(cfg_infos->verbose) print_debug("Done sending raw content\n");
 
     return 0;
 }

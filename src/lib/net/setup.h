@@ -13,8 +13,7 @@
 /**
  * @brief Creates and configures server socket.
  * @return  Returns a socket file descriptor, or -1 on failure 
- */
-    
+ */  
 int setup_server(void);
 
 #endif

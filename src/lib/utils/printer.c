@@ -39,6 +39,8 @@ void print_debug(char *format, ...){
 
 
 void print_request(request *r){
+    if(!r) return;
+
     printf("%s %s %s\n", r->method, r->path, r->version);
     for (int i = 0; i < r->header_count; i++){
         printf("%s: %s\n", r->headers[i].key, r->headers[i].value);
@@ -55,6 +57,8 @@ void print_request(request *r){
 
 
 void print_response(response_head *r){
+    if(!r) return;
+
     printf("%s %s %s\n", r->version, r->code, r->reason);
     for (int i = 0; i < r->header_count; i++)
     {
