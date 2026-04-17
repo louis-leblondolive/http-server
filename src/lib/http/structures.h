@@ -1,6 +1,8 @@
 #ifndef STRUCTURES
 #define STRUCTURES
 
+#include <sys/socket.h>
+
 #include "config.h"
 
 
@@ -53,7 +55,7 @@ typedef struct Request {
 } request;
 
 
-typedef struct Response {
+typedef struct Response_Head {
     char version[MAX_VERSION_LEN];
     char code[MAX_CODE_LEN];
     char reason[MAX_REASON_LEN];
@@ -61,10 +63,8 @@ typedef struct Response {
     header headers[MAX_HEADER_NB];
     int header_count;
 
-    char body[MAX_BODY_LEN];
-    size_t body_len;
+    size_t content_len;
 
-    char connection_type[MAX_HEADER_VALUE_SIZE];
-} response;
+} response_head;
 
 #endif

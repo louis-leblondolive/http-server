@@ -17,11 +17,15 @@ typedef struct HTTP_Reason_Code {
 
 const http_reason_code *get_http_reason(http_status status);
 http_status get_status_from_code(int code);
-void reset_response(response *serv_resp);
-http_status add_header(response *serv_resp, char *key, char *value);
-http_status init_response_status(response *serv_resp, http_status status);
-http_status init_response_default_headers(response *serv_resp);
-http_status init_response_content_length(response *serv_resp);
-char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *raw_response_len);
+
+void reset_response(response_head *serv_resp_hd);
+http_status add_header(response_head *serv_resp_hd, char *key, char *value);
+http_status init_response_status(response_head *serv_resp_hd, http_status status);
+http_status init_response_default_headers(response_head *serv_resp_hd);
+http_status init_response_content_length(response_head *serv_resp_hd);
+char *build_text_response_head(config_infos* cfg_infos, response_head *serv_resp_hd, size_t *raw_response_len);
+
+int send_raw_content(config_infos *cfg_infos, char *buf, size_t buf_len);
+int send_response_head(config_infos *cfg_infos, response_head *serv_resp_hd);
 
 #endif

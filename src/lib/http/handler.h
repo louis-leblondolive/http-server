@@ -22,9 +22,9 @@ typedef struct Mime_type {
 
 
 char *get_mime_type(char *path);
-http_status handle_error(config_infos *cfg_infos, response *serv_resp, http_status err_status);
-http_status handle_get(config_infos *cfg_infos, request *client_req, response *serv_resp, bool head_only);
-http_status handle_options(config_infos *cfg_infos, response *serv_resp);
-http_status handle_cgi(config_infos *cfg_infos, request *client_req, response *serv_resp);
+int handle_error(config_infos *cfg_infos, http_status err_status);
+int handle_get(config_infos *cfg_infos, request *client_req, bool head_only);
+int handle_options(config_infos *cfg_infos);
+int handle_cgi(config_infos *cfg_infos, request *client_req);
 
 #endif

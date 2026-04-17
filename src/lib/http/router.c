@@ -140,8 +140,8 @@ static http_status check_request(request *client_req){
 
 
 
-http_status route_request(config_infos *cfg_infos, request *client_req, 
-    response *serv_resp, http_status error_flag){
+int route_request(config_infos *cfg_infos, request *client_req, 
+    http_status error_flag){
 
     
     // ------ Checking request ----------------------------------------------------
@@ -149,7 +149,7 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
 
     // Check for error during parsing
     if(error_flag != HTTP_OK){                                          
-        http_status handle_res = handle_error(cfg_infos, serv_resp, error_flag);
+        int handle_res = handle_error(cfg_infos, error_flag);
         return handle_res;
     }
 
@@ -160,7 +160,7 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
     // Request content validation (HTTP Logic and Headers)
     http_status check_res = check_request(client_req);       
     if(check_res != HTTP_OK){
-        http_status handle_res = handle_error(cfg_infos, serv_resp, check_res);
+        int handle_res = handle_error(cfg_infos, check_res);
         return handle_res;
     }
 
@@ -170,22 +170,22 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
 
     if(strncmp(client_req->path, "www/cgi-bin/", 12) == 0){     // Using CGI
 
-        http_status handle_res = handle_cgi(cfg_infos, client_req, serv_resp);
+        int handle_res = handle_cgi(cfg_infos, client_req);
         return handle_res;
     }
     else if(strcmp(client_req->method, "GET") == 0){            // GET
 
-        http_status handle_res = handle_get(cfg_infos, client_req, serv_resp, false);
+        int handle_res = handle_get(cfg_infos, client_req, false);
         return handle_res;
     } 
     else if(strcmp(client_req->method, "HEAD") == 0) {    // HEAD 
 
-        http_status handle_res = handle_get(cfg_infos, client_req, serv_resp, true);
+        int handle_res = handle_get(cfg_infos, client_req, true);
         return handle_res;
     }
     else if(strcmp(client_req->method, "OPTIONS") == 0) { // OPTIONS
 
-        http_status handle_res = handle_options(cfg_infos, serv_resp);
+        int handle_res = handle_options(cfg_infos);
         return handle_res;
     } 
     else if(strcmp(client_req->method, "POST") == 0) {  // POST
@@ -195,7 +195,7 @@ http_status route_request(config_infos *cfg_infos, request *client_req,
     }
 
     else {                                                // Base case 
-        http_status handle_res = handle_error(cfg_infos, serv_resp, HTTP_NOT_IMPLEMENTED);
+        int handle_res = handle_error(cfg_infos, HTTP_NOT_IMPLEMENTED);
         return handle_res;
     }
 

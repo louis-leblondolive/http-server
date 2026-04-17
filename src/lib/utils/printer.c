@@ -54,18 +54,11 @@ void print_request(request *r){
 }
 
 
-void print_response(response *r){
+void print_response(response_head *r){
     printf("%s %s %s\n", r->version, r->code, r->reason);
     for (int i = 0; i < r->header_count; i++)
     {
         printf("%s: %s\n", r->headers[i].key, r->headers[i].value);
     }
     printf("\n");
-    if(r->body_len <= 2000){
-        printf("----- Body -----\n");
-        if(strcmp(r->body, "\0") != 0) printf("%s\n", r->body);
-        printf("----- End of Body -----\n");
-    } else {
-        printf("Long body (length > 2000)\n");
-    }
 }

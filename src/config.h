@@ -29,8 +29,15 @@
 #define HTTP_VERSION "HTTP/1.1"
 
 typedef struct Config_infos {
+
+    // verbosity parameters
     bool quiet;
     bool verbose;
+
+    // communication parameters
+    int client_fd;
+    char connection_type[MAX_HEADER_VALUE_SIZE];
+
 } config_infos;
 
 #endif

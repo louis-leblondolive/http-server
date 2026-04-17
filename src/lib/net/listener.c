@@ -82,6 +82,7 @@ void listener(config_infos *cfg_infos, int sock_fd){
             int exit_status = 0;
 
             close(sock_fd);
+            cfg_infos->client_fd = client_fd;
             
             struct timeval timeout = {TIMEOUT_SECONDS, TIMEOUT_MILLISECONDS};
             if(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1){
@@ -170,47 +171,15 @@ void listener(config_infos *cfg_infos, int sock_fd){
            
 
                 //  ----- Process request --------------------------------------------
-                response serv_resp;
-                memset(&serv_resp, 0, sizeof(response));
-                if (route_request(cfg_infos, &client_req, &serv_resp, parse_res) != HTTP_OK){
+    
+                if (route_request(cfg_infos, &client_req, parse_res) != 0){
                     print_error("Server error while routing request\n");
                     exit_status = 1;
                     break;
                 };
-            
-                // Displaying response
-                if(!cfg_infos->quiet){
-                    print_info("Processed request into response :\n");
-                    print_response(&serv_resp);
-                }
-
-                //  ----- Respond --------------------------------------------------
-                size_t raw_response_len = 0;
-                char *raw_response = build_text_response(cfg_infos, &serv_resp, &raw_response_len);
-                if(!raw_response){
-                    print_error("Server couldn't build text response\n");
-                    exit_status = 1;
-                    break;
-                }
-
-                // Displaying raw response 
-                if(cfg_infos->verbose){
-                    print_debug("Sending raw response\n");
-                    printf("%s\n", raw_response);
-                }
-
-                
-                int send_res = send_all(client_fd, raw_response, raw_response_len);
-                free(raw_response);
-
-                if(send_res == -1){
-                    perror("server : send");
-                    exit_status = 1;
-                    break;
-                }
 
                 // Exits if connection is close
-                if(strcasecmp(serv_resp.connection_type, "close") == 0){
+                if(strcasecmp(cfg_infos->connection_type, "close") == 0){
                     break;
                 }
 

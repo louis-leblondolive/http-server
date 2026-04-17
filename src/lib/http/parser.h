@@ -36,8 +36,8 @@ typedef enum Parsing_Response_State {
     RESP_PARSING_HEADER_KEY,
     RESP_PARSING_HEADER_KEY_SEPARATOR,
     RESP_PARSING_HEADER_VALUE, 
-    RESP_EXPECTING_FINAL_LF,
-    RESP_PARSING_BODY,
+    RESP_EXPECTING_FINAL_LF, 
+    RESP_PARSING_BODY, 
     RESP_END_PARSING
 } parsing_response_state ; 
 
@@ -70,9 +70,9 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
 
 
 
-http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_response_buf, response *parsed_response, 
+http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_response_buf, 
+                            response_head *parsed_response_head, char *parsed_resp_body, 
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
-                            bool *parsing_complete, parsing_response_state *parse_state, 
-                            bool *has_body_length);
+                            bool *parsing_complete, parsing_response_state *parse_state, bool *has_body_length);
 
 #endif 

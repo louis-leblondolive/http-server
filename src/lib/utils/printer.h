@@ -16,6 +16,6 @@ void print_error(char *format, ...);
 void print_info(char *format, ...);
 void print_debug(char *format, ...);
 void print_request(request *r);
-void print_response(response *r);
+void print_response(response_head *r);
 
 #endif

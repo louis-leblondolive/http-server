@@ -18,6 +18,6 @@
  * @param error_flag :  used to pinpoint error that could have occured during parsing 
  * @return              HTTP_OK if routing is successful, corresponding HTTP status otherwise 
  */
-http_status route_request(config_infos *cfg_infos, request *client_req, response *serv_resp, http_status error_flag);
+int route_request(config_infos *cfg_infos, request *client_req, http_status error_flag);
 
 #endif

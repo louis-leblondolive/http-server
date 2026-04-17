@@ -1,5 +1,7 @@
 #include "response.h"
 
+// ---------- HTTP reasons and error codes --------------------------------------------
+
 static const http_reason_code http_200 = {200, "Ok"};
 static const http_reason_code http_201 = {201, "Created"};
 static const http_reason_code http_204 = {204, "No Content"};
@@ -101,14 +103,16 @@ http_status get_status_from_code(int code){
 }
 
 
-void reset_response(response *serv_resp){
-   memset(serv_resp, 0, sizeof(response));
+// ---------- Response handling ------------------------------------------------
+
+void reset_response(response_head *serv_resp_hd){
+   memset(&serv_resp_hd, 0, sizeof(serv_resp_hd));
 }
 
 
-http_status add_header(response *serv_resp, char *key, char *value){
+http_status add_header(response_head *serv_resp_hd, char *key, char *value){
     
-    if(serv_resp->header_count >= MAX_HEADER_NB 
+    if(serv_resp_hd->header_count >= MAX_HEADER_NB 
     || strlen(key) > MAX_HEADER_KEY_SIZE
     || strlen(value) > MAX_HEADER_VALUE_SIZE){
         return HTTP_INTERNAL_ERROR;
@@ -118,58 +122,58 @@ http_status add_header(response *serv_resp, char *key, char *value){
     strcpy(new_hd.key, key);
     strcpy(new_hd.value, value);
 
-    serv_resp->headers[serv_resp->header_count] = new_hd;
-    serv_resp->header_count ++;
+    serv_resp_hd->headers[serv_resp_hd->header_count] = new_hd;
+    serv_resp_hd->header_count ++;
 
     return HTTP_OK;
 }
 
 
-http_status init_response_status(response *serv_resp, http_status status){
+http_status init_response_status(response_head *serv_resp_hd, http_status status){
 
     if(strlen(HTTP_VERSION) > MAX_VERSION_LEN) return HTTP_INTERNAL_ERROR;
-    strcpy(serv_resp->version, HTTP_VERSION);
+    strcpy(serv_resp_hd->version, HTTP_VERSION);
     
     const http_reason_code *reason_code = get_http_reason(status);
 
     const char *reason = reason_code->reason;
     if(strlen(reason) > MAX_REASON_LEN) return HTTP_INTERNAL_ERROR;
-    strcpy(serv_resp->reason, reason);
+    strcpy(serv_resp_hd->reason, reason);
 
     char code_str[16];
     snprintf(code_str, sizeof(code_str), "%d", reason_code->code);
     if(strlen(code_str) > MAX_CODE_LEN) return HTTP_INTERNAL_ERROR;
-    strcpy(serv_resp->code, code_str);
+    strcpy(serv_resp_hd->code, code_str);
   
     return HTTP_OK;
 }
 
 
-http_status init_response_default_headers(response *serv_resp){
+http_status init_response_default_headers(response_head *serv_resp_hd){
 
     char date[64];
     time_t now = time(NULL);
     struct tm *gmt = gmtime(&now);
     strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S GMT", gmt);
-    if(add_header(serv_resp, "Date",  date) != HTTP_OK) return HTTP_INTERNAL_ERROR;
+    if(add_header(serv_resp_hd, "Date",  date) != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
     char server_info[256];
     snprintf(server_info, sizeof(server_info), "%s/%s", SERVER_NAME, SERVER_VERSION);
-    if(add_header(serv_resp, "Server", server_info) != HTTP_OK) return HTTP_INTERNAL_ERROR;
+    if(add_header(serv_resp_hd, "Server", server_info) != HTTP_OK) return HTTP_INTERNAL_ERROR;
 
     return HTTP_OK;
 
 }
 
 
-http_status init_response_content_length(response *serv_resp){
+http_status init_response_content_length(response_head *serv_resp_hd){
 
     // Must be called after filling response body 
 
     char content_len_str[32];
-    snprintf(content_len_str, sizeof(content_len_str), "%zu", serv_resp->body_len);
+    snprintf(content_len_str, sizeof(content_len_str), "%zu", serv_resp_hd->content_len);
 
-    http_status add_h_res = add_header(serv_resp, "Content-Length", content_len_str);
+    http_status add_h_res = add_header(serv_resp_hd, "Content-Length", content_len_str);
 
     if(add_h_res != HTTP_OK){
         return add_h_res;
@@ -179,19 +183,18 @@ http_status init_response_content_length(response *serv_resp){
 }
 
 
-char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *raw_response_len){
-    // assume that request length has been tested and is the right size
+char *build_text_response_head(config_infos *cfg_infos, response_head *serv_resp_hd, size_t *raw_response_len){
+    // assume that response length has been tested and is the right size
     // returns a pointer : free must be used after usage 
     
-    size_t status_len = strlen(serv_resp->version) + strlen(serv_resp->code) + strlen(serv_resp->reason) + 4;
-    size_t body_len = serv_resp->body_len;
+    size_t status_len = strlen(serv_resp_hd->version) + strlen(serv_resp_hd->code) + strlen(serv_resp_hd->reason) + 4;
     size_t headers_len = 0;
 
-    for (int i = 0; i < serv_resp->header_count; i++){
-        headers_len += strlen(serv_resp->headers[i].key) + strlen(serv_resp->headers[i].value) + 4;
+    for (int i = 0; i < serv_resp_hd->header_count; i++){
+        headers_len += strlen(serv_resp_hd->headers[i].key) + strlen(serv_resp_hd->headers[i].value) + 4;
     }
 
-    size_t total_len = status_len + body_len + headers_len + 2 + 1; // counting \r\n and final \0 (which will be removed)
+    size_t total_len = status_len + headers_len + 2 + 1; // counting \r\n and final \0 (which will be removed)
 
 
     char *text_response = (char*)malloc(sizeof(char) * total_len);
@@ -200,7 +203,8 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *
     if(!text_response) return NULL;
 
     char status_line[status_len + 1];
-    snprintf(status_line, status_len + 1, "%s %s %s\r\n", serv_resp->version, serv_resp->code, serv_resp->reason);
+    snprintf(status_line, status_len + 1, "%s %s %s\r\n", serv_resp_hd->version, 
+        serv_resp_hd->code, serv_resp_hd->reason);
     
     for (size_t i = 0; i < status_len; i++){
         text_response[cursor] = status_line[i];
@@ -209,10 +213,11 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *
 
     if(cfg_infos->verbose) print_debug("Response - done writing status\n");
     
-    for (int h = 0; h < serv_resp->header_count; h++){
+    for (int h = 0; h < serv_resp_hd->header_count; h++){
         
         char header_line[MAX_HEADER_KEY_SIZE + MAX_HEADER_VALUE_SIZE + 4];
-        snprintf(header_line, sizeof(header_line), "%s: %s\r\n", serv_resp->headers[h].key, serv_resp->headers[h].value);
+        snprintf(header_line, sizeof(header_line), "%s: %s\r\n", serv_resp_hd->headers[h].key,
+            serv_resp_hd->headers[h].value);
 
         int line_len = strlen(header_line);
         for (int i = 0; i < line_len; i++){
@@ -228,16 +233,50 @@ char *build_text_response(config_infos* cfg_infos, response *serv_resp, size_t *
     text_response[cursor] = '\n';
     cursor ++;
 
-    for (size_t i = 0; i < body_len; i++){
-        text_response[cursor] = serv_resp->body[i];
-        cursor++;
-    }
-
-    if(cfg_infos->verbose) print_debug("Response - done writing body\n");
-
     text_response[cursor] = '\0';
     
     *raw_response_len = cursor;
 
     return text_response;
+}
+
+
+// -------------- Send logic ---------------------------------------------------------------------
+
+
+int send_raw_content(config_infos *cfg_infos, char *buf, size_t buf_len){
+
+    print_debug("Sending raw content \n");
+
+    size_t sent = 0;
+    while(sent < buf_len){
+        ssize_t n = send(cfg_infos->client_fd, (void*)buf + sent, buf_len - sent, 0);
+        if(n == -1) return -1;
+        sent += n;
+    }
+    
+    print_debug("Done sending raw content\n");
+
+    return 0;
+}
+
+
+int send_response_head(config_infos *cfg_infos, response_head *serv_resp_hd){
+
+    if(cfg_infos->verbose){
+        print_debug("Response - Sending response head \n");
+        print_response(serv_resp_hd);
+    }
+
+    size_t raw_head_len = 0;
+    char *raw_head = build_text_response_head(cfg_infos, serv_resp_hd, &raw_head_len);
+
+    if(!raw_head) return -1;
+
+    int send_hd_res = send_raw_content(cfg_infos, raw_head, raw_head_len);
+    free(raw_head);
+
+    if(cfg_infos->verbose) print_debug("Response - Done sending response head \n");
+    
+    return send_hd_res;
 }
