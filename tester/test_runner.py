@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 test_runner.py — HTTP server test runner
-Usage: python test_runner.py [--host 127.0.0.1] [--port 8080]
+Usage: python test_runner.py [--host 127.0.0.1] [--port 3490]
 """
 
 import argparse
@@ -25,7 +25,7 @@ console = Console()
 def parse_args():
     parser = argparse.ArgumentParser(description="HTTP server test runner")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8080)
+    parser.add_argument("--port", type=int, default=3490)
     return parser.parse_args()
 
 
@@ -89,7 +89,7 @@ def run_all(host: str, port: int):
     console.print(
         Panel(
             f"[bold]HTTP Server Test Runner[/]\n"
-            f"[dim]Target → [cyan]{host}:{port}[/cyan]  ·  {len(tests)} tests in {len(categories)} categories[/]",
+            f"[dim]Target[/dim] → [bold][dark_cyan]{host}:{port}[/dark_cyan][/bold] [dim] ·  {len(tests)} tests in {len(categories)} categories[/]",
             box=box.ROUNDED,
             padding=(0, 2),
         )
