@@ -2,11 +2,11 @@
 
 ![CI](https://github.com/louis-leblondolive/http-server/actions/workflows/ci.yml/badge.svg)
 
-A low-level HTTP/1.1 server built in C from scratch. This project was developped as a deep dive into 
+A low-level HTTP/1.1 server built in C from scratch. This project was developed as a deep dive into 
 POSIX network programming, concurrency and robust protocol parsing.
 
 >[!IMPORTANT]
->This project was made under macOS. Other platforms are not supported yet.
+>This project was made under macOS. Other platforms are not supported.
 >HTTP version is **HTTP/1.1**, other versions such as HTTP/2 or HTTP/3 are not supported. 
 
 ## Main Features
@@ -15,7 +15,9 @@ POSIX network programming, concurrency and robust protocol parsing.
 - **Keep-Alive support** : Efficient connection persistence using a ring buffer.
 - **FSM parser** : Handles chunked requests seamlessly.
 - **Full static serving** : Served with proper MIME types and `If-Modified-Since` cache support.
+- **CGI support** : Using fork() and environment variables, tested on python scripts.
 - **Security features** : Built-in protection against path traversal and buffer overflow.
+- **Demo website** : Start the server and test it at `http://localhost:3490`.
 
 ## Usage
 
@@ -68,24 +70,43 @@ make
 
 ## Technical Deep Dive
 
+### Server General Architecture 
+
+Request lifecycle is designed as follows : 
+
+```mermaid
+flowchart TD
+    A([accept]) --> B(["fork()<br/><small>New child process</small>"])
+    B --> C(["FSM parser<br/><small>Read via ring buffer</small>"])
+    C --> D["Valid request ?<br/><small>Method, size and safety</small>"]
+    D -->|No| E(["4xx<br/><small>400 / 403</small>"])
+    D -->|Yes| F(["Router<br/><small>Passing request to handler</small>"])
+    E --> Z([close])
+    F --> G["Handling sucessful ?<br/><small>File found or successful CGI execution"]
+    G -->|No| H(["404<br/><small>Not Found</small>"])
+    G -->|Yes| I(["200 OK<br/><small>Headers, MIME, If-Modified-Since</small>"])
+    H --> Z
+    I --> J["Keep-Alive ?"]
+    J -->|No| Z
+    J -->|Yes| C
+```
+
 ### Robust Request Parsing 
 
 Instead of using fragile string splitting, this server implements a Finite State Machine. This allows the server to pause and resume whenever data is partially received over the network. 
 
 ```mermaid
-stateDiagram-v2
-    [*] --> PARSING_METHOD
-    PARSING_METHOD --> PARSING_PATH : space found
-    PARSING_PATH --> PARSING_VERSION : space found
-    PARSING_VERSION --> EXPECTING_LF : space found
-    EXPECTING_LF --> PARSING_NEW_LINE : '\n’ found
-    PARSING_NEW_LINE --> EXPECTING_FINAL_LF : '\r' found
-    PARSING_NEW_LINE --> PARSING_HEADER_KEY : char found
-    PARSING_HEADER_KEY --> PARSING_HEADER_VALUE : ':' found
-    PARSING_HEADER_VALUE --> EXPECTING_LF : \r found
-    EXPECTING_FINAL_LF --> PARSING_BODY : body exists
-    PARSING_BODY --> END_PARSING : Content-Length reached
-    END_PARSING --> [*]
+flowchart TD
+    A([PARSING_METHOD]) --> |space found| B([PARSING_PATH])
+    B --> |space found| C([PARSING_VERSION])
+    C --> |'\r' found| D([EXPECTING_LF])
+    D --> |'\n' found| E([PARSING_NEW_LINE])
+    E --> |'\r' found| F([EXPECTING_FINAL_LF]) 
+    E --> |char found| G([PARSING_HEADER_KEY]) 
+    G --> |':' found| H([PARSING_HEADER_VALUE])
+    H --> |'\r' found| D 
+    F --> |body exists| I([PARSING_BODY])
+    I --> |Content-Length reached| J([END_PARSING])
 ```
 
 ### System Reliability & Signal Handling 
@@ -117,8 +138,13 @@ This repository has the following structure :
 │   ├── config.h
 │   └── main.c
 ├── www/
+│   ├── cgi-bin/
+│   │   └── .../
 │   ├── index.html
 │   └── .../
+├── tester/
+│   ├── test_runner.py
+│   └── test_suite.py
 │
 └── Makefile
 ```
@@ -136,7 +162,7 @@ This repository has the following structure :
 
     - **`config.h`** 
 
-        This files allows you to change server parameters, including : 
+        This file allows you to change server parameters, including : 
         - Port and backlog
         - Server name and version 
         - Default path to use when meeting a `/`request 
@@ -146,11 +172,54 @@ This repository has the following structure :
 
         The server entry point, which should remain untouched. 
 
+- **`tester`**
+
+    This folder contains a Python tester used to report bugs during development. The `test_runner.py` file 
+    runs all tests contained in `test_suite.py`.
+
 - **`www`**
     
     This directory contains the static files that will be served to the client. By default, the server will try to send `www/index.html`, this can be overriden in `config.h`. 
 
+    Place your executables in the `cgi-bin` folder.
 
+>[!WARNING]
+>The server will try to run CGI scritps with `execl`. Make sure your scripts are either compiled or include a 
+>relevant shebang.
+
+
+## Tests & Benchmark 
+
+This project includes a Python tester used throughout the development to report and correct bugs. 
+
+### Test Categories
+
+The following error categories were tested : 
+- Basic valid requests
+- Error codes correctness
+- Request format (malformed, oversized requests and headers issues)
+- URI edge cases (path traversal or wrong path)
+- Connection handling and response format 
+
+### Tester Usage
+
+#### Prerequisites
+
+```bash
+python3 --version   #Python 3.13.7 or >=
+pip show rich | grep Version    #Version: 15.0.0 or >= 
+```
+#### Usage
+```bash
+python3 test_runner.py
+```
+
+### Benchmark
+Tested with `wrk -c 100` on Macbook Air (M2). 
+Requests/sec:   4477.65
+Transfer/sec:     26.08MB
+
+`fork()` causes Requests/sec to be quite low compared to nginx (due to memory duplication), but it also reinforces safety by isolating processes from one another.
 
 ## References
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
