@@ -176,7 +176,7 @@ int handle_options(config_infos *cfg_infos){
     cache_res = init_response_content_length(&serv_resp_hd);
     if(cache_res != HTTP_OK) return handle_error(cfg_infos, cache_res);
 
-    return HTTP_OK;
+    return send_response_head(cfg_infos, &serv_resp_hd);
 }
 
 

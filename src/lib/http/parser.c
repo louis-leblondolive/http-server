@@ -227,13 +227,12 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
             
 
             case REQ_PARSING_BODY:
-                if (*pos >= MAX_BODY_LEN - 1) return HTTP_REQUEST_ENTITY_TOO_LARGE;
+                if (*pos >= MAX_BODY_LEN) return HTTP_REQUEST_ENTITY_TOO_LARGE;
 
                 parsed_request->body[*pos] = cur_char;
                 (*pos)++;
 
                 if (*pos >= parsed_request->body_len) {
-                    parsed_request->body[*pos] = '\0'; 
                     *parsing_complete = true;
                     *parse_state = REQ_END_PARSING;
                     if(cfg_infos->verbose) print_debug("Parser - Parsed body : %s \n", parsed_request->body);

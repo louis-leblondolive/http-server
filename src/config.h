@@ -25,7 +25,7 @@
 
 #define MAX_REQUEST_LEN       (MAX_BODY_LEN + 16384)  // 64 KB body + 16 KB headers
 
-#define ALLOWED_METHODS "GET, HEAD, OPTIONS"
+#define ALLOWED_METHODS "GET, HEAD, OPTIONS, POST"
 #define HTTP_VERSION "HTTP/1.1"
 
 typedef struct Config_infos {
