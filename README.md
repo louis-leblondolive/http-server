@@ -10,7 +10,7 @@ POSIX network programming, concurrency and robust protocol parsing.
 >HTTP version is **HTTP/1.1**, other versions such as HTTP/2 or HTTP/3 are not supported. 
 
 ## Main Features
-- **HTTP/1.1 support** and standard status codes for GET, HEAD, OPTIONS.
+- **HTTP/1.1 support** and standard status codes for GET, HEAD, OPTIONS, POST.
 - **Concurrency model** : Multi-process architecture using fork() with zombie process reaping.
 - **Keep-Alive support** : Efficient connection persistence using a ring buffer.
 - **FSM parser** : Handles chunked requests seamlessly.
