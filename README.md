@@ -66,7 +66,7 @@ You can run the generated binaries from the `build` directory, depending on the 
 > (Colors supported). 
 
 >[!NOTE]
->Because this server uses fork(), the **debug mode** might introduce a slight latency (approx. 40ms) due to ASan >overhead. For raw performance (<1ms response time), always use the **release mode**.
+>Because this server uses fork(), the **debug mode** might introduce a slight latency (approx. 40ms) due to ASan overhead. For better performance (<1ms response time), always use the **release mode**.
 
 
 ## Usage
