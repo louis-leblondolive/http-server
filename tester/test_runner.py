@@ -6,6 +6,7 @@ Usage: python test_runner.py [--host 127.0.0.1] [--port 3490]
 
 import argparse
 import time
+import sys
 from collections import defaultdict
 
 from rich import box
@@ -163,4 +164,4 @@ def run_all(host: str, port: int):
 
 if __name__ == "__main__":
     args = parse_args()
-    exit(run_all(args.host, args.port))
+    sys.exit(run_all(args.host, args.port))
