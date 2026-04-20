@@ -245,3 +245,4 @@ Transfer/sec:     26.08MB
 
 ## References
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
+- [RFC 9112 - HTTP/1.1](https://datatracker.ietf.org/doc/html/rfc9112)
