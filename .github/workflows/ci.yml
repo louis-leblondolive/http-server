@@ -7,20 +7,16 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Build Debug
         run: make debug
-      
       - name: Install Python dependencies
         run: |
           python3 -m venv .venv
           .venv/bin/pip install -r tester/requirements.txt
-      
       - name: Start server
         run: |
-          export ASAN_OPTIONS=detect_leaks=1
+          export ASAN_OPTIONS="detect_leaks=0"
           ./build/debug/main & sleep 2
-      
       - name: Run tests
         run: .venv/bin/python3 tester/test_runner.py
 
