@@ -1,12 +1,14 @@
 #ifndef COMPAT
 #define COMPAT
 
-#ifndef __APPLE__
 #include <string.h>
 #include <stddef.h>
 #include <time.h>
 #include <stdlib.h>
 
+#if !defined(__APPLE__)
+
+#if defined(__GLIBC__) && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 38))
 static inline size_t strlcpy(char *dst, const char *src, size_t size) {
     size_t srclen = strlen(src);
     if (size > 0) {
@@ -16,7 +18,9 @@ static inline size_t strlcpy(char *dst, const char *src, size_t size) {
     }
     return srclen;
 }
+#endif
 
+#if !defined(__linux__)
 static inline time_t timegm(struct tm *tm) {
     time_t t;
     char *tz = getenv("TZ");
@@ -28,6 +32,7 @@ static inline time_t timegm(struct tm *tm) {
     tzset();
     return t;
 }
-
 #endif
-#endif 
+
+#endif // !__APPLE__
+#endif // COMPAT
