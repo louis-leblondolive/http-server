@@ -5,8 +5,8 @@
 /obj
 
 # Python 
-test/.venv
-test/__pycache__/
+tester/.venv
+tester/__pycache__/
 *.pyc
 *.pyo
 

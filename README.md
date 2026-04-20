@@ -6,7 +6,7 @@ A low-level HTTP/1.1 server built in C from scratch. This project was developed 
 POSIX network programming, concurrency and robust protocol parsing.
 
 >[!IMPORTANT]
->This project was made under macOS. Other platforms are not supported.
+>This project includes macOS and Linux support.
 >HTTP version is **HTTP/1.1**, other versions such as HTTP/2 or HTTP/3 are not supported. 
 
 ## Main Features
@@ -41,8 +41,8 @@ They will be accessible at `http://localhost:3490/index.html`, `http://localhost
 ## Build and Run 
 
 ### Prerequisites
-- macOS (see [Important] notice above)
-- `clang` or `gcc`
+- macOS or Linux (see [Important] notice above)
+- `cc`
 - `make`
 
 ### Installation 
@@ -184,7 +184,7 @@ This repository has the following structure :
     Place your executables in the `cgi-bin` folder.
 
 >[!WARNING]
->The server will try to run CGI scritps with `execl`. Make sure your scripts are either compiled or include a 
+>The server will try to run CGI scripts with `execl`. Make sure your scripts are either compiled or include a 
 >relevant shebang.
 
 
@@ -211,7 +211,7 @@ pip show rich | grep Version    #Version: 15.0.0 or >=
 ```
 #### Usage
 ```bash
-python3 test_runner.py
+python3 tester/test_runner.py
 ```
 
 ### Benchmark
@@ -219,7 +219,7 @@ Tested with `wrk -c 100` on Macbook Air (M2).
 Requests/sec:   4477.65
 Transfer/sec:     26.08MB
 
-`fork()` causes Requests/sec to be quite low compared to nginx (due to memory duplication), but it also reinforces safety by isolating processes from one another.
+`fork()` causes Requests/sec to be quite low (due to memory duplication), but it also reinforces safety by isolating processes from one another.
 
 ## References
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
