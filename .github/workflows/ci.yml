@@ -8,9 +8,9 @@ jobs:
       - name: Build
         run: make
       - name: Install Python dependencies
-        run: pip install -r tester/requirements.txt
+        run: python3 -m pip install -r tester/requirements.txt
       - name: Start server
-        run: ./build/main & sleep 1
+        run: cd $GITHUB_WORKSPACE && ./build/main & sleep 1
       - name: Run tests
         run: python3 tester/test_runner.py
   build-linux:
@@ -22,6 +22,6 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r tester/requirements.txt
       - name: Start server
-        run: ./build/main & sleep 1
+        run: cd $GITHUB_WORKSPACE && ./build/main & sleep 1
       - name: Run tests
         run: python3 tester/test_runner.py

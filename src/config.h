@@ -8,7 +8,7 @@
 #define SERVER_VERSION "1.0"
 #define PORT "3490"
 #define BACKLOG 10
-#define DEFAULT_PATH "www/index.html"
+#define DEFAULT_PATH "index.html"   // www_root is included automatically 
 #define TIMEOUT_SECONDS 5
 #define TIMEOUT_MILLISECONDS 0
 
@@ -37,6 +37,9 @@ typedef struct Config_infos {
     // communication parameters
     int client_fd;
     char connection_type[MAX_HEADER_VALUE_SIZE];
+
+    // session parameters
+    char www_root[MAX_PATH_LEN];
 
 } config_infos;
 

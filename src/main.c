@@ -7,6 +7,8 @@ int main(int argc, char *argv[]){
     // initialize configuration informations
     config_infos cfg_infos;
     memset(&cfg_infos, 0, sizeof(config_infos));
+
+    // verbosity parameters 
     cfg_infos.quiet = false;
     cfg_infos.verbose = false;
 
@@ -18,6 +20,11 @@ int main(int argc, char *argv[]){
         cfg_infos.quiet = false;
         cfg_infos.verbose = false;
     }
+
+    // session parameters
+    char cwd[MAX_PATH_LEN];
+    getcwd(cwd, MAX_PATH_LEN);
+    snprintf(cfg_infos.www_root, MAX_PATH_LEN, "%s/www", cwd);
 
     // run server 
     int sock_fd = setup_server();

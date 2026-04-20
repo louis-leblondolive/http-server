@@ -184,6 +184,8 @@ int handle_options(config_infos *cfg_infos){
 
 int handle_cgi(config_infos *cfg_infos, request *client_req){
 
+    if(!cfg_infos->quiet) print_debug("Handler - CGI - Starting handler\n");
+
     // Asserts method is GET or POST
     if(strcmp(client_req->method, "GET") != 0 && strcmp(client_req->method, "POST") != 0){
         return handle_error(cfg_infos, HTTP_METHOD_NOT_ALLOWED);
@@ -192,23 +194,27 @@ int handle_cgi(config_infos *cfg_infos, request *client_req){
     // ----- Setup environment variables -------------------------------------------------------
 
     // Clearing environment variables, 
-    #ifdef __APPLE__
-        environ = NULL;
-    #else
-        clearenv();
-    #endif
+    *environ = NULL;
+
+    if(!cfg_infos->quiet) print_debug("Handler - CGI - Start setting environment up\n");
 
     // Default variables
+    if(!cfg_infos->quiet) print_debug("Handler - CGI - Writing default variables\n");
     setenv("REQUEST_METHOD", client_req->method, 1);              
     setenv("SERVER_PROTOCOL", "HTTP/1.1", 1);
     setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin", 1);
+
+    printf("content len %zu\n", client_req->body_len);
 
     char len_str[32];
     snprintf(len_str, sizeof(len_str), "%zu", client_req->body_len);
     setenv("CONTENT_LENGTH", len_str, 1);
 
+    // Path and query
+    if(!cfg_infos->quiet) print_debug("Handler - CGI - Resolving execution path and query\n");
     char exec_path[MAX_PATH_LEN];
     char query[MAX_PATH_LEN];
+
     if(strcmp(client_req->method, "GET") == 0){
         
         if (sscanf(client_req->path, "%[^?]?%s", exec_path, query) < 1) {
@@ -225,7 +231,9 @@ int handle_cgi(config_infos *cfg_infos, request *client_req){
         setenv("QUERY_STRING", "", 1);
     }
 
+    
     // Client headers 
+    if(!cfg_infos->quiet) print_debug("Handler - CGI - Converting headers to environment variables\n");
     for (int i = 0; i < client_req->header_count; i++){
 
         header hd = client_req->headers[i];
@@ -252,6 +260,7 @@ int handle_cgi(config_infos *cfg_infos, request *client_req){
         }
     }
 
+    if(!cfg_infos->quiet) print_debug("Handler - CGI - Done setting environment up\n");
 
     // ----- Pipe and fork -------------------------------------------------------
     int pipe_in[2], pipe_out[2];

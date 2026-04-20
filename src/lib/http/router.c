@@ -4,13 +4,13 @@
  * @brief Secures the path by adding root directory www as a prefix
  * Replaces root "/" with the default path 
  */
-static void assign_real_path(request *client_req){
+static void assign_real_path(config_infos *cfg_infos, request *client_req){
 
     if(strcmp(client_req->path, "/") == 0){
-        strlcpy(client_req->path, DEFAULT_PATH, MAX_PATH_LEN);
+        snprintf(client_req->path, MAX_PATH_LEN, "%s/%s", cfg_infos->www_root, DEFAULT_PATH);
     } else {
         char new_path[MAX_PATH_LEN];
-        snprintf(new_path, MAX_PATH_LEN, "www%s", client_req->path);
+        snprintf(new_path, MAX_PATH_LEN, "%s%s", cfg_infos->www_root, client_req->path);
         strlcpy(client_req->path, new_path, MAX_PATH_LEN);
     }
 }
@@ -41,24 +41,17 @@ static bool file_exists(char *path){
 }
 
 /**
- * @brief Checks if file is a descendant of the www/ directory to 
+ * @brief Checks if file is a descendant of the www_root directory to 
  *  avoid path traversal 
- * @param path The local path to the file (including www prefix)
+ * @param path The local path to the file (including www_root prefix)
  */
-static bool file_access_allowed(char *path){
+static bool file_access_allowed(config_infos *cfg_infos, char *path){
 
-    char absolute_path[MAX_PATH_LEN]; 
-    if(getcwd(absolute_path, MAX_PATH_LEN - 4) == NULL) return false;
-
-    char full_path[MAX_PATH_LEN * 2];
-    snprintf(full_path, 2 * MAX_PATH_LEN, "%s/%s", absolute_path, path);
 
     char resolved_path[MAX_PATH_LEN * 2];
-    if(realpath(full_path, resolved_path) == NULL) return false;
+    if(realpath(path, resolved_path) == NULL) return false;
 
-    snprintf(absolute_path, MAX_PATH_LEN, "%s/www", absolute_path);
-
-    return strncmp(absolute_path, resolved_path, strlen(absolute_path)) == 0;
+    return strncmp(resolved_path, cfg_infos->www_root, strlen(cfg_infos->www_root)) == 0;
 }
 
 /** 
@@ -66,7 +59,7 @@ static bool file_access_allowed(char *path){
  * @return HTTP_OK if request content is valid, corresponding http_status otherwise 
  * @note Local path (including www prefix) must have been assigned to client request before calling
  */
-static http_status check_request(request *client_req){
+static http_status check_request(config_infos *cfg_infos, request *client_req){
 
     char clean_path[MAX_PATH_LEN];
     sscanf(client_req->path, "%[^?]", clean_path); // Getting rid of query string for get cgi-requests
@@ -75,15 +68,15 @@ static http_status check_request(request *client_req){
     if(strlen(client_req->method) == 0) return HTTP_BAD_REQUEST;
     
         // Checking path 
-        // Assuming that prefix "www" has been added
-    if(strlen(clean_path) <= 3 || clean_path[3] != '/'     
+        // Assuming that www_root prefix has been added
+    if(strncmp(client_req->path, cfg_infos->www_root, strlen(cfg_infos->www_root)) != 0   
         || !path_is_valid(clean_path)){                           
 
         return HTTP_BAD_REQUEST;
     }   
 
     if(!file_exists(clean_path)) return HTTP_NOT_FOUND;
-    if(!file_access_allowed(clean_path)) return HTTP_FORBIDDEN; 
+    if(!file_access_allowed(cfg_infos, clean_path)) return HTTP_FORBIDDEN; 
 
         // checking version 
     int maj = 0, min = 0;
@@ -154,11 +147,11 @@ int route_request(config_infos *cfg_infos, request *client_req,
     }
 
     // Preparing local path 
-    assign_real_path(client_req);
+    assign_real_path(cfg_infos, client_req);
     if(cfg_infos->verbose) print_debug("Routing - Assigned local path %s\n", client_req->path);
 
     // Request content validation (HTTP Logic and Headers)
-    http_status check_res = check_request(client_req);       
+    http_status check_res = check_request(cfg_infos, client_req);       
     if(check_res != HTTP_OK){
         int handle_res = handle_error(cfg_infos, check_res);
         return handle_res;
@@ -168,7 +161,10 @@ int route_request(config_infos *cfg_infos, request *client_req,
     // ------ Routing request ----------------------------------------------------
     if(cfg_infos->verbose) print_debug("Request checked, routing request\n");
 
-    if(strncmp(client_req->path, "www/cgi-bin/", 12) == 0){     // Using CGI
+    char cgi_path[MAX_PATH_LEN];
+    snprintf(cgi_path, MAX_PATH_LEN, "%s/cgi-bin/", cfg_infos->www_root);
+
+    if(strncmp(client_req->path, cgi_path, strlen(cgi_path)) == 0){     // Using CGI
 
         int handle_res = handle_cgi(cfg_infos, client_req);
         return handle_res;
