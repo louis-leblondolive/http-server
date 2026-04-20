@@ -47,8 +47,10 @@ void listener(config_infos *cfg_infos, int sock_fd){
             continue;
         }
         
-        if (!cfg_infos->quiet) print_info("Server : got connection from %s\n", 
-            sockaddr_in_addr_to_str(&client_addr));
+        char *str_client_addr = sockaddr_in_addr_to_str(&client_addr);
+        if (!cfg_infos->quiet) print_info("Server : got connection from %s\n", str_client_addr);
+        free(str_client_addr); 
+            
 
         pid_t pid = fork();
 

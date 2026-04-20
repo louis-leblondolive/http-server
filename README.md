@@ -19,24 +19,6 @@ POSIX network programming, concurrency and robust protocol parsing.
 - **Security features** : Built-in protection against path traversal and buffer overflow.
 - **Demo website** : Start the server and test it at `http://localhost:3490`.
 
-## Usage
-
-Start the server :
-```bash
-./build/main
-```
-
-Then open your browser at `http://localhost:3490` (or whichever port is set in `config.h`).
-
-Place your files in the `www/` directory and start the server. For example :
-
-```text
-www/
-├── index.html
-└── style.css
-```
-They will be accessible at `http://localhost:3490/index.html`, `http://localhost:3490/style.css`, etc.
-
 
 ## Build and Run 
 
@@ -51,22 +33,62 @@ git clone https://github.com/louis-leblondolive/http-server.git
 cd http-server
 ```
 
-### Compile
+### Compilation
+
+The server features 2 compilation profiles :
+- **`debug` (default)**: using ASan and compilation flags. Best for development and memory safety checks.
+- **`release`**: compiling with optimization and without ASan. Best for benchmarks.
+
+To compile, just type in :
+
 ```bash
-make
+make debug      # or simply 'make'
+make release
 ```
 
 > [!TIP]
 > You can edit `src/config.h` before building to configure the port, backlog, etc.
 
 ### Run
+
+You can run the generated binaries from the `build` directory, depending on the compilation profile you chose :
+
 ```bash
-./build/main
+# For debuging and safety checks
+./build/debug/main      
+
+# For performance testing 
+./build/release/main  
 ```
 
 > [!TIP]
 > Use the verbose mode (`-v`) to display debug information or the quiet mode (`-q`) to silence logs.
 > (Colors supported). 
+
+>[!NOTE]
+>Because this server uses fork(), the **debug mode** might introduce a slight latency (approx. 40ms) due to ASan >overhead. For raw performance (<1ms response time), always use the **release mode**.
+
+
+## Usage
+
+Place your files in the `www/` directory. For example :
+
+```text
+www/
+├── index.html
+└── style.css
+```
+
+Then start the server (either on release or debug mode) :
+```bash
+./build/release/main
+```
+
+Open your browser at `http://localhost:3490` (or whichever port is set in `config.h`).
+
+
+Your files will be accessible at `http://localhost:3490/index.html`, `http://localhost:3490/style.css`, etc.
+
 
 ## Technical Deep Dive
 
@@ -183,7 +205,7 @@ This repository has the following structure :
 
     Place your executables in the `cgi-bin` folder.
 
->[!WARNING]
+>[!CAUTION]
 >The server will try to run CGI scripts with `execl`. Make sure your scripts are either compiled or include a 
 >relevant shebang.
 
