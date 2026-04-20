@@ -1,8 +1,6 @@
 #include "handler.h"
 
-#ifdef __APPLE__
-    extern char **environ;
-#endif
+extern char **environ;
 
 // --- UTILS ---------------   
 
