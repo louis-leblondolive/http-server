@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include "compat.h"
 #include "structures.h"
 #include "printer.h"
 #include "handler.h"

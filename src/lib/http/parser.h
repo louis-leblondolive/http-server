@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "compat.h"
 #include "structures.h"
 #include "ring_buffer.h"
 #include "config.h"

@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <signal.h>
 
+#include "compat.h"
 #include "structures.h"
 #include "response.h"
 #include "parser.h"

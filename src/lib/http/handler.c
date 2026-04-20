@@ -1,6 +1,8 @@
 #include "handler.h"
 
-extern char **environ;
+#ifdef __APPLE__
+    extern char **environ;
+#endif
 
 // --- UTILS ---------------   
 
@@ -189,7 +191,12 @@ int handle_cgi(config_infos *cfg_infos, request *client_req){
 
     // ----- Setup environment variables -------------------------------------------------------
 
-    *environ = NULL;
+    // Clearing environment variables, 
+    #ifdef __APPLE__
+        environ = NULL;
+    #else
+        clearenv();
+    #endif
 
     // Default variables
     setenv("REQUEST_METHOD", client_req->method, 1);              

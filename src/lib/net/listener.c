@@ -28,8 +28,8 @@ void listener(config_infos *cfg_infos, int sock_fd){
 
     // Setting up signal handler 
     sa.sa_handler = sigchld_handler;
-    sigemptyset(&sa.sa_mask);   // no signal will be blocked during handler execution 
-    sa.sa_flags = SA_RESTART;   // restarting interupted systems calls to avoid recv or accept EINTR error 
+    sigemptyset(&sa.sa_mask);   
+    sa.sa_flags = SA_RESTART;   // avoid recv or accept EINTR error 
     if(sigaction(SIGCHLD, &sa, NULL) == -1){
         perror("sigaction");
         exit(1);
