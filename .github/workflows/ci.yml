@@ -1,6 +1,5 @@
 name: CI
 on: [push, pull_request]
-
 jobs:
   build-macos:
     runs-on: macos-latest
@@ -8,14 +7,17 @@ jobs:
       - uses: actions/checkout@v3
       - name: Build
         run: make
+      - name: Install Python dependencies
+        run: pip install -r tester/requirements.txt
       - name: Run tests
         run: python3 tester/test_runner.py
-
   build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Build
         run: make
+      - name: Install Python dependencies
+        run: pip install -r tester/requirements.txt
       - name: Run tests
         run: python3 tester/test_runner.py
