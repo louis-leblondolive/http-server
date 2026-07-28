@@ -6,7 +6,7 @@ OBJ_DIR   := obj
 
 # Sources and objects
 SRCS     := $(shell find src -name "*.c")
-INC_DIRS := $(shell find src -type d)
+INC_DIRS := $(shell find include -type d)
 INCLUDES := $(addprefix -I, $(INC_DIRS))
 
 # Base flags 
@@ -23,7 +23,7 @@ DEBUG_TARGET   := $(BUILD_DIR)/debug/$(TARGET)
 
 # Release mode : optimize and ignore ASan
 RELEASE_CFLAGS  := $(BASE_CFLAGS) -O3 -march=native
-RELEASE_LDFLAGS := 
+RELEASE_LDFLAGS :=
 RELEASE_OBJ_DIR := $(OBJ_DIR)/release
 RELEASE_OBJS    := $(SRCS:%.c=$(RELEASE_OBJ_DIR)/%.o)
 RELEASE_TARGET  := $(BUILD_DIR)/release/$(TARGET)
