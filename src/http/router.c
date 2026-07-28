@@ -4,7 +4,7 @@
  * @brief Secures the path by adding root directory www as a prefix
  * Replaces root "/" with the default path 
  */
-static void assign_real_path(config_infos *cfg_infos, request *client_req){
+static void assign_real_path(config_infos_t *cfg_infos, request_t *client_req){
 
     if(strcmp(client_req->path, "/") == 0){
         snprintf(client_req->path, MAX_PATH_LEN, "%s/%s", cfg_infos->www_root, DEFAULT_PATH);
@@ -45,7 +45,7 @@ static bool file_exists(char *path){
  *  avoid path traversal 
  * @param path The local path to the file (including www_root prefix)
  */
-static bool file_access_allowed(config_infos *cfg_infos, char *path){
+static bool file_access_allowed(config_infos_t *cfg_infos, char *path){
 
 
     char resolved_path[MAX_PATH_LEN * 2];
@@ -59,7 +59,7 @@ static bool file_access_allowed(config_infos *cfg_infos, char *path){
  * @return HTTP_OK if request content is valid, corresponding http_status otherwise 
  * @note Local path (including www prefix) must have been assigned to client request before calling
  */
-static http_status check_request(config_infos *cfg_infos, request *client_req){
+static http_status_e check_request(config_infos_t *cfg_infos, request_t *client_req){
 
     char clean_path[MAX_PATH_LEN];
     sscanf(client_req->path, "%[^?]", clean_path); // Getting rid of query string for get cgi-requests
@@ -90,7 +90,7 @@ static http_status check_request(config_infos *cfg_infos, request *client_req){
 
     for (int i = 0; i < client_req->header_count; i++){
 
-        header hd = client_req->headers[i];
+        header_t hd = client_req->headers[i];
         
         if(strcasecmp(hd.key, "Content-Length") == 0){                  // Check Content Length
             content_length_exists = true;
@@ -133,8 +133,8 @@ static http_status check_request(config_infos *cfg_infos, request *client_req){
 
 
 
-int route_request(config_infos *cfg_infos, request *client_req, 
-    http_status error_flag){
+int route_request(config_infos_t *cfg_infos, request_t *client_req, 
+    http_status_e error_flag){
 
     
     // ------ Checking request ----------------------------------------------------
@@ -151,7 +151,7 @@ int route_request(config_infos *cfg_infos, request *client_req,
     if(cfg_infos->verbose) print_debug("Routing - Assigned local path %s\n", client_req->path);
 
     // Request content validation (HTTP Logic and Headers)
-    http_status check_res = check_request(cfg_infos, client_req);       
+    http_status_e check_res = check_request(cfg_infos, client_req);       
     if(check_res != HTTP_OK){
         int handle_res = handle_error(cfg_infos, check_res);
         return handle_res;

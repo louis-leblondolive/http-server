@@ -20,6 +20,6 @@
  * 
  * @warning Destination socket must be set in `cfg_infos`.
  */
-int route_request(config_infos *cfg_infos, request *client_req, http_status error_flag);
+int route_request(config_infos_t *cfg_infos, request_t *client_req, http_status_e error_flag);
 
 #endif

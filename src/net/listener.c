@@ -13,7 +13,7 @@ static void sigchld_handler(int s){
 }
 
 
-void listener(config_infos *cfg_infos, int sock_fd){
+void listener(config_infos_t *cfg_infos, int sock_fd){
 
     struct sigaction sa; 
     int client_fd;          
@@ -73,7 +73,7 @@ void listener(config_infos *cfg_infos, int sock_fd){
                 exit(1);
             }
 
-            r_buffer *raw_request_buf = init_ring_buffer(2 * MAX_REQUEST_LEN);
+            ring_buffer_t *raw_request_buf = init_ring_buffer(2 * MAX_REQUEST_LEN);
 
             while(1){   // Client main loop 
 
@@ -81,13 +81,13 @@ void listener(config_infos *cfg_infos, int sock_fd){
                 bool parsing_complete = false;
                 bool peer_closed = false;
 
-                request client_req;
-                memset(&client_req, 0, sizeof(request));
+                request_t client_req;
+                memset(&client_req, 0, sizeof(client_req));
                 client_req.header_count = 0;
                 client_req.body_len = 0;
 
-                http_status parse_res = HTTP_OK;
-                parsing_request_state parse_state = REQ_PARSING_METHOD;
+                http_status_e parse_res = HTTP_OK;
+                parsing_request_state_e parse_state = REQ_PARSING_METHOD;
                 size_t total_bytes_parsed = 0;
                 size_t pos = 0;
                 ssize_t bytes_received = 0;

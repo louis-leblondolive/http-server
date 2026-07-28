@@ -16,10 +16,10 @@
 #include "ring_buffer.h"
 #include "printer.h"
 
-typedef struct Mime_type {
+typedef struct mime_type_s {
     char *ext;
     char *mime;
-} mime_type ;
+} mime_type_t;
 
 // --- UTILS ---------------   
 /**
@@ -36,7 +36,7 @@ char *get_mime_type(char *path);
  * @param err_status   The error to send back.
  * @return 0 on successful handle and send, -1 otherwise.
  */
-int handle_error(config_infos *cfg_infos, http_status err_status);
+int handle_error(config_infos_t *cfg_infos, http_status_e err_status);
 
 /**
  * @brief Handles an HTTP GET request. 
@@ -46,14 +46,14 @@ int handle_error(config_infos *cfg_infos, http_status err_status);
  * @param head_only     Set to true to send head only (Usefull to handle HEAD requests).
  * @return 0 on successful handle and send, -1 otherwise.
  */
-int handle_get(config_infos *cfg_infos, request *client_req, bool head_only);
+int handle_get(config_infos_t *cfg_infos, request_t *client_req, bool head_only);
 
 /**
  * @brief Handles an HTTP OPTIONS request
  * @param cfg_infos     Configuration informations (Destination socket must be set).
  * @return 0 on successful handle and send, -1 otherwise.
  */
-int handle_options(config_infos *cfg_infos);
+int handle_options(config_infos_t *cfg_infos);
 
 /**
  * @brief Handles a CGI request, using fork() and execl with environment variables to execute 
@@ -67,6 +67,6 @@ int handle_options(config_infos *cfg_infos);
  * @warning Script response size is bounded by MAX_BODY_LEN, trying to go above will trigger an 
  * error. 
  */
-int handle_cgi(config_infos *cfg_infos, request *client_req);
+int handle_cgi(config_infos_t *cfg_infos, request_t *client_req);
 
 #endif

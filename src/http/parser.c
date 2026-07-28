@@ -1,9 +1,9 @@
 #include "parser.h"
 
 
-http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf, request *parsed_request, 
+http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_request_buf, request_t *parsed_request, 
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
-                            bool *parsing_complete, parsing_request_state *parse_state){
+                            bool *parsing_complete, parsing_request_state_e *parse_state){
 
     int local_parse_counter = 0;
     char cur_char;
@@ -203,7 +203,7 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
                 // Double end of line (\r\n\r\n) has been found 
                 // Assigning crucial header values to corresponding request fields 
                 for (int i = 0; i < parsed_request->header_count; i++){
-                    header hd = parsed_request->headers[i];
+                    header_t hd = parsed_request->headers[i];
         
                     if(strcasecmp(hd.key, "Connection") == 0){
                         strlcpy(parsed_request->connection_type, hd.value, MAX_HEADER_VALUE_SIZE);
@@ -267,10 +267,10 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
 
 
 
-http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_response_buf, 
-                            response_head *parsed_response_head, char *parsed_resp_body,
+http_status_e parse_raw_cgi_response(config_infos_t *cfg_infos, ring_buffer_t *raw_response_buf, 
+                            response_head_t *parsed_response_head, char *parsed_resp_body,
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
-                            bool *parsing_complete, parsing_response_state *parse_state, bool *has_body_length){
+                            bool *parsing_complete, parsing_response_state_e *parse_state, bool *has_body_length){
 
     int local_parse_counter = 0;
     char cur_char;
@@ -303,7 +303,7 @@ http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_respon
                     strlcpy(parsed_response_head->reason, "OK", MAX_REASON_LEN);
                     
                     for (int i = 0; i < parsed_response_head->header_count; i++){
-                        header hd = parsed_response_head->headers[i];
+                        header_t hd = parsed_response_head->headers[i];
             
                         if(strcasecmp(hd.key, "Connection") == 0){
                             strlcpy(cfg_infos->connection_type, hd.value, MAX_HEADER_VALUE_SIZE);

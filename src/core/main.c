@@ -5,8 +5,8 @@
 int main(int argc, char *argv[]){
 
     // initialize configuration informations
-    config_infos cfg_infos;
-    memset(&cfg_infos, 0, sizeof(config_infos));
+    config_infos_t cfg_infos;
+    memset(&cfg_infos, 0, sizeof(cfg_infos));
 
     // verbosity parameters 
     cfg_infos.quiet = false;

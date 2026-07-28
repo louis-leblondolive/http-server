@@ -2,29 +2,29 @@
 
 // ---------- HTTP reasons and error codes --------------------------------------------
 
-static const http_reason_code http_200 = {200, "Ok"};
-static const http_reason_code http_201 = {201, "Created"};
-static const http_reason_code http_204 = {204, "No Content"};
-static const http_reason_code http_304 = {304, "Not Modified"};
-static const http_reason_code http_400 = {400, "Bad Request"};
-static const http_reason_code http_401 = {401, "Unauthorized"};
-static const http_reason_code http_403 = {403, "Forbidden"};
-static const http_reason_code http_404 = {404, "Not Found"};
-static const http_reason_code http_405 = {405, "Method Not Allowed"};
-static const http_reason_code http_408 = {408, "Request Time-out"};
-static const http_reason_code http_413 = {413, "Request Entity Too Large"};
-static const http_reason_code http_414 = {414, "Request URI Too Long"};
-static const http_reason_code http_417 = {417, "Expectation Failed"};
-static const http_reason_code http_418 = {418, "I'm a teapot"};
-static const http_reason_code http_431 = {431, "Request Header Fields Too Large"};
-static const http_reason_code http_500 = {500, "Internal Server Error"};
-static const http_reason_code http_501 = {501, "Not Implemented"};
-static const http_reason_code http_502 = {502, "Bad Gateway"};
-static const http_reason_code http_505 = {505, "HTTP Version Not Supported"};
-static const http_reason_code http_unknown = {0, "Unknown"};
+static const http_reason_code_t http_200 = {200, "Ok"};
+static const http_reason_code_t http_201 = {201, "Created"};
+static const http_reason_code_t http_204 = {204, "No Content"};
+static const http_reason_code_t http_304 = {304, "Not Modified"};
+static const http_reason_code_t http_400 = {400, "Bad Request"};
+static const http_reason_code_t http_401 = {401, "Unauthorized"};
+static const http_reason_code_t http_403 = {403, "Forbidden"};
+static const http_reason_code_t http_404 = {404, "Not Found"};
+static const http_reason_code_t http_405 = {405, "Method Not Allowed"};
+static const http_reason_code_t http_408 = {408, "Request Time-out"};
+static const http_reason_code_t http_413 = {413, "Request Entity Too Large"};
+static const http_reason_code_t http_414 = {414, "Request URI Too Long"};
+static const http_reason_code_t http_417 = {417, "Expectation Failed"};
+static const http_reason_code_t http_418 = {418, "I'm a teapot"};
+static const http_reason_code_t http_431 = {431, "Request Header Fields Too Large"};
+static const http_reason_code_t http_500 = {500, "Internal Server Error"};
+static const http_reason_code_t http_501 = {501, "Not Implemented"};
+static const http_reason_code_t http_502 = {502, "Bad Gateway"};
+static const http_reason_code_t http_505 = {505, "HTTP Version Not Supported"};
+static const http_reason_code_t http_unknown = {0, "Unknown"};
 
 
-const http_reason_code *get_http_reason(http_status status){
+const http_reason_code_t *get_http_reason(http_status_e status){
 
     switch (status)
     {
@@ -76,7 +76,7 @@ const http_reason_code *get_http_reason(http_status status){
 }
 
 
-http_status get_status_from_code(int code){
+http_status_e get_status_from_code(int code){
     switch (code)
     {
     case 200: return HTTP_OK;
@@ -105,7 +105,7 @@ http_status get_status_from_code(int code){
 
 // ---------- Response handling ------------------------------------------------
 
-http_status add_header(response_head *serv_resp_hd, char *key, char *value){
+http_status_e add_header(response_head_t *serv_resp_hd, char *key, char *value){
     
     if(serv_resp_hd->header_count >= MAX_HEADER_NB 
     || strlen(key) > MAX_HEADER_KEY_SIZE
@@ -113,7 +113,7 @@ http_status add_header(response_head *serv_resp_hd, char *key, char *value){
         return HTTP_INTERNAL_ERROR;
     }
 
-    header new_hd;
+    header_t new_hd;
     strcpy(new_hd.key, key);
     strcpy(new_hd.value, value);
 
@@ -124,12 +124,12 @@ http_status add_header(response_head *serv_resp_hd, char *key, char *value){
 }
 
 
-http_status init_response_status(response_head *serv_resp_hd, http_status status){
+http_status_e init_response_status(response_head_t *serv_resp_hd, http_status_e status){
 
     if(strlen(HTTP_VERSION) > MAX_VERSION_LEN) return HTTP_INTERNAL_ERROR;
     strcpy(serv_resp_hd->version, HTTP_VERSION);
     
-    const http_reason_code *reason_code = get_http_reason(status);
+    const http_reason_code_t *reason_code = get_http_reason(status);
 
     const char *reason = reason_code->reason;
     if(strlen(reason) > MAX_REASON_LEN) return HTTP_INTERNAL_ERROR;
@@ -144,7 +144,7 @@ http_status init_response_status(response_head *serv_resp_hd, http_status status
 }
 
 
-http_status init_response_default_headers(response_head *serv_resp_hd){
+http_status_e init_response_default_headers(response_head_t *serv_resp_hd){
 
     char date[64];
     time_t now = time(NULL);
@@ -161,14 +161,14 @@ http_status init_response_default_headers(response_head *serv_resp_hd){
 }
 
 
-http_status init_response_content_length(response_head *serv_resp_hd){
+http_status_e init_response_content_length(response_head_t *serv_resp_hd){
 
     // Must be called after filling response body 
 
     char content_len_str[32];
     snprintf(content_len_str, sizeof(content_len_str), "%zu", serv_resp_hd->content_len);
 
-    http_status add_h_res = add_header(serv_resp_hd, "Content-Length", content_len_str);
+    http_status_e add_h_res = add_header(serv_resp_hd, "Content-Length", content_len_str);
 
     if(add_h_res != HTTP_OK){
         return add_h_res;
@@ -189,7 +189,7 @@ http_status init_response_content_length(response_head *serv_resp_hd){
  * @warning This function returns a pointer, user must free it after usage. 
  * @note This function assumes that response length has been tested and is the right size.
  */
-static char *build_text_response_head(config_infos *cfg_infos, response_head *serv_resp_hd, 
+static char *build_text_response_head(config_infos_t *cfg_infos, response_head_t *serv_resp_hd, 
     size_t *raw_response_len){
     
     size_t status_len = strlen(serv_resp_hd->version) + strlen(serv_resp_hd->code) + strlen(serv_resp_hd->reason) + 4;
@@ -246,7 +246,7 @@ static char *build_text_response_head(config_infos *cfg_infos, response_head *se
 }
 
 
-int send_raw_content(config_infos *cfg_infos, char *buf, size_t buf_len){
+int send_raw_content(config_infos_t *cfg_infos, char *buf, size_t buf_len){
 
     if(cfg_infos->verbose) print_debug("Sending raw content \n");
 
@@ -263,7 +263,7 @@ int send_raw_content(config_infos *cfg_infos, char *buf, size_t buf_len){
 }
 
 
-int send_response_head(config_infos *cfg_infos, response_head *serv_resp_hd){
+int send_response_head(config_infos_t *cfg_infos, response_head_t *serv_resp_hd){
 
     if(cfg_infos->verbose){
         print_debug("Response - Sending response head \n");

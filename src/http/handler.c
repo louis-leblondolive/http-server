@@ -4,7 +4,7 @@ extern char **environ;
 
 // --- UTILS ---------------   
 
-static const mime_type mime_types[] = {
+static const mime_type_t mime_types[] = {
     { "html", "text/html; charset=utf-8" },
     { "css",  "text/css" },
     { "js",   "application/javascript" },
@@ -32,19 +32,19 @@ char *get_mime_type(char *path){
 // --- HANDLE FUNCTIONS ---------------    
 
 
-int handle_error(config_infos *cfg_infos, http_status err_status){
+int handle_error(config_infos_t *cfg_infos, http_status_e err_status){
 
     if(cfg_infos->verbose) print_debug("Handler - Handling error\n");
 
     // --- Building response head ------------
-    response_head serv_resp_hd;
+    response_head_t serv_resp_hd;
     memset(&serv_resp_hd, 0, sizeof(serv_resp_hd));
 
     if (init_response_status(&serv_resp_hd, err_status) != HTTP_OK) return -1;
 
     if (init_response_default_headers(&serv_resp_hd) != HTTP_OK) return -1;
 
-    const http_reason_code *reason_code = get_http_reason(err_status);
+    const http_reason_code_t *reason_code = get_http_reason(err_status);
 
     if (add_header(&serv_resp_hd, "Content-Type", "text/html") != HTTP_OK) return -1;
 
@@ -77,14 +77,14 @@ int handle_error(config_infos *cfg_infos, http_status err_status){
 }
 
 
-int handle_get(config_infos *cfg_infos, request *client_req, bool head_only){
+int handle_get(config_infos_t *cfg_infos, request_t *client_req, bool head_only){
 
 
     // ---------- Build response head ------------------------------------------------
-    response_head serv_resp_hd; 
+    response_head_t serv_resp_hd; 
     memset(&serv_resp_hd, 0, sizeof(serv_resp_hd));
 
-    http_status cache_res;
+    http_status_e cache_res;
 
     // init default fields
     cache_res = init_response_status(&serv_resp_hd, HTTP_OK);
@@ -151,14 +151,14 @@ int handle_get(config_infos *cfg_infos, request *client_req, bool head_only){
 }
 
 
-int handle_options(config_infos *cfg_infos){
+int handle_options(config_infos_t *cfg_infos){
 
     strncpy(cfg_infos->connection_type, "close", MAX_HEADER_VALUE_SIZE);
         
-    response_head serv_resp_hd;
+    response_head_t serv_resp_hd;
     memset(&serv_resp_hd, 0, sizeof(serv_resp_hd));
 
-    http_status cache_res;  
+    http_status_e cache_res;  
 
     cache_res = init_response_status(&serv_resp_hd, HTTP_OK);
     if(cache_res != HTTP_OK) return handle_error(cfg_infos, cache_res);
@@ -180,7 +180,7 @@ int handle_options(config_infos *cfg_infos){
 }
 
 
-int handle_cgi(config_infos *cfg_infos, request *client_req){
+int handle_cgi(config_infos_t *cfg_infos, request_t *client_req){
 
     if(!cfg_infos->quiet) print_debug("Handler - CGI - Starting handler\n");
 
@@ -234,7 +234,7 @@ int handle_cgi(config_infos *cfg_infos, request *client_req){
     if(!cfg_infos->quiet) print_debug("Handler - CGI - Converting headers to environment variables\n");
     for (int i = 0; i < client_req->header_count; i++){
 
-        header hd = client_req->headers[i];
+        header_t hd = client_req->headers[i];
         
         // Name exception for content-type 
         if(strcasecmp(hd.key, "Content-Type") == 0){
@@ -297,16 +297,16 @@ int handle_cgi(config_infos *cfg_infos, request *client_req){
 
     bool parsing_complete = false;
 
-    http_status parse_res = HTTP_OK;
-    parsing_response_state parse_state = RESP_PARSING_NEW_LINE;
+    http_status_e parse_res = HTTP_OK;
+    parsing_response_state_e parse_state = RESP_PARSING_NEW_LINE;
     size_t total_bytes_parsed = 0;
     size_t pos = 0;
     bool has_body_len = false; 
 
-    r_buffer *raw_response_buf = init_ring_buffer(MAX_REQUEST_LEN);
+    ring_buffer_t *raw_response_buf = init_ring_buffer(MAX_REQUEST_LEN);
     char tmp_read_buf[4096]; 
 
-    response_head serv_resp_hd;
+    response_head_t serv_resp_hd;
     memset(&serv_resp_hd, 0, sizeof(serv_resp_hd));
     serv_resp_hd.content_len = 0;
     serv_resp_hd.header_count = 0;
@@ -371,7 +371,7 @@ int handle_cgi(config_infos *cfg_infos, request *client_req){
 
     // ----- Building and sending response -------------------------------------------------------
     
-    http_status cache_res;
+    http_status_e cache_res;
 
     // ----- Headers ------
         // status 

@@ -28,7 +28,7 @@
 #define ALLOWED_METHODS "GET, HEAD, OPTIONS, POST"
 #define HTTP_VERSION "HTTP/1.1"
 
-typedef struct Config_infos {
+typedef struct config_infos_s {
 
     // verbosity parameters
     bool quiet;
@@ -41,6 +41,6 @@ typedef struct Config_infos {
     // session parameters
     char www_root[MAX_PATH_LEN];
 
-} config_infos;
+} config_infos_t;
 
 #endif

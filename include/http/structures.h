@@ -6,7 +6,7 @@
 #include "config.h"
 
 
-typedef enum Http_status {
+typedef enum http_status {
     HTTP_OK,
     HTTP_CREATED, 
     HTTP_NO_CONTENT,
@@ -30,21 +30,21 @@ typedef enum Http_status {
     HTTP_BAD_GATEWAY,
     HTTP_VERSION_NOT_SUPPORTED
 
-} http_status;
+} http_status_e;
 
 
-typedef struct Header {
+typedef struct header_s {
     char key[MAX_HEADER_KEY_SIZE];
     char value[MAX_HEADER_VALUE_SIZE];
-} header ;
+} header_t ;
 
 
-typedef struct Request {
+typedef struct request_s {
     char method[MAX_METHOD_LEN];
     char path[MAX_PATH_LEN];
     char version[MAX_VERSION_LEN];
 
-    header headers[MAX_HEADER_NB];
+    header_t headers[MAX_HEADER_NB];
     int header_count;
 
     char body[MAX_BODY_LEN];
@@ -52,19 +52,19 @@ typedef struct Request {
 
     char connection_type[MAX_HEADER_VALUE_SIZE];
 
-} request;
+} request_t;
 
 
-typedef struct Response_Head {
+typedef struct response_head_s {
     char version[MAX_VERSION_LEN];
     char code[MAX_CODE_LEN];
     char reason[MAX_REASON_LEN];
 
-    header headers[MAX_HEADER_NB];
+    header_t headers[MAX_HEADER_NB];
     int header_count;
 
     size_t content_len;
 
-} response_head;
+} response_head_t;
 
 #endif

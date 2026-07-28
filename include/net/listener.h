@@ -38,6 +38,6 @@
  * * @note This function contains an infinite loop and is not expected to return 
  * unless a fatal signal is received.
  */
-void listener(config_infos *cfg_infos, int sock_fd);
+void listener(config_infos_t *cfg_infos, int sock_fd);
 
 #endif

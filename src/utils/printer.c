@@ -38,7 +38,7 @@ void print_debug(char *format, ...){
 }
 
 
-void print_request(request *r){
+void print_request(request_t *r){
     if(!r) return;
 
     printf("%s %s %s\n", r->method, r->path, r->version);
@@ -56,7 +56,7 @@ void print_request(request *r){
 }
 
 
-void print_response(response_head *r){
+void print_response(response_head_t *r){
     if(!r) return;
 
     printf("%s %s %s\n", r->version, r->code, r->reason);

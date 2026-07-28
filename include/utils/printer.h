@@ -21,8 +21,8 @@ void print_info(char *format, ...);
 // Prints an info and adds the "[DEBUG]" beacon
 void print_debug(char *format, ...);
 
-void print_request(request *r);
+void print_request(request_t *r);
 
-void print_response(response_head *r);
+void print_response(response_head_t *r);
 
 #endif

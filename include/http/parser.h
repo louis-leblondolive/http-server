@@ -13,7 +13,7 @@
 #include "printer.h"
 
 
-typedef enum Parsing_Request_State {
+typedef enum parsing_request_state {
     REQ_PARSING_METHOD, 
     REQ_PARSING_METHOD_SEPARATOR,
     REQ_PARSING_PATH, 
@@ -28,10 +28,10 @@ typedef enum Parsing_Request_State {
     REQ_EXPECTING_FINAL_LF, 
     REQ_END_PARSING
     
-} parsing_request_state ; 
+} parsing_request_state_e ; 
 
 
-typedef enum Parsing_Response_State {
+typedef enum parsing_response_state {
     RESP_EXPECTING_LF, 
     RESP_PARSING_NEW_LINE,
     RESP_PARSING_HEADER_KEY,
@@ -40,7 +40,7 @@ typedef enum Parsing_Response_State {
     RESP_EXPECTING_FINAL_LF, 
     RESP_PARSING_BODY, 
     RESP_END_PARSING
-} parsing_response_state ; 
+} parsing_response_state_e ; 
 
 
 /**
@@ -65,9 +65,9 @@ typedef enum Parsing_Response_State {
  * @note **Crucial**: A return of HTTP_OK does NOT mean the request is ready. 
  * Always check `*parsing_complete` before routing.
  */
-http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf, request *parsed_request, 
+http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_request_buf, request_t *parsed_request, 
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos,
-                            bool *parsing_complete, parsing_request_state *parse_state);
+                            bool *parsing_complete, parsing_request_state_e *parse_state);
 
 
 
@@ -95,9 +95,9 @@ http_status parse_raw_request(config_infos *cfg_infos, r_buffer *raw_request_buf
  * @note **Crucial**: A return of HTTP_OK does NOT mean the request is ready. 
  * Always check `*parsing_complete` before responding.
  */
-http_status parse_raw_cgi_response(config_infos *cfg_infos, r_buffer *raw_response_buf, 
-                            response_head *parsed_response_head, char *parsed_resp_body, 
+http_status_e parse_raw_cgi_response(config_infos_t *cfg_infos, ring_buffer_t *raw_response_buf, 
+                            response_head_t *parsed_response_head, char *parsed_resp_body, 
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
-                            bool *parsing_complete, parsing_response_state *parse_state, bool *has_body_length);
+                            bool *parsing_complete, parsing_response_state_e *parse_state, bool *has_body_length);
 
 #endif 

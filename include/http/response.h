@@ -9,10 +9,10 @@
 #include "structures.h"
 #include "printer.h"
 
-typedef struct HTTP_Reason_Code {
+typedef struct http_reason_code_s {
     int code;
     char *reason; 
-} http_reason_code;
+} http_reason_code_t;
 
 // ---------- HTTP reasons and error codes --------------------------------------------
 /**
@@ -20,14 +20,14 @@ typedef struct HTTP_Reason_Code {
  * @param status    HTTP status which reason & code should be determined.
  * @return Pointer to the corresponding HTTP reason & code, {0, Unknown} if status is not known.
  */
-const http_reason_code *get_http_reason(http_status status);
+const http_reason_code_t *get_http_reason(http_status_e status);
 
 /**
  * @brief Returns the HTTP status associated to a given code.
  * @param code The code associated to the status to determine.
  * @return Associated status, or HTTP_INTERNAL_ERROR if code is not known.
  */
-http_status get_status_from_code(int code);
+http_status_e get_status_from_code(int code);
 
 // ---------- Response handling ------------------------------------------------
 /**
@@ -37,7 +37,7 @@ http_status get_status_from_code(int code);
  * @param value         Header value.
  * @return HTTP_OK if header was correctly added, corresponding error status otherwise.
  */
-http_status add_header(response_head *serv_resp_hd, char *key, char *value);
+http_status_e add_header(response_head_t *serv_resp_hd, char *key, char *value);
 
 /**
  * @brief Initiates a response version, code and reason fields following a given status.
@@ -45,18 +45,18 @@ http_status add_header(response_head *serv_resp_hd, char *key, char *value);
  * @param status         Response status to set.
  * @return HTTP_OK if status fields were correctly completed, corresponding error status otherwise.
  */
-http_status init_response_status(response_head *serv_resp_hd, http_status status);
+http_status_e init_response_status(response_head_t *serv_resp_hd, http_status_e status);
 
 /**
  * @brief Adds date and server headers to a given response head.
  * @return HTTP_OK upon success, corresponding error status otherwise.
  */
-http_status init_response_default_headers(response_head *serv_resp_hd);
+http_status_e init_response_default_headers(response_head_t *serv_resp_hd);
 
 /**
  * @brief Reads the content_len field and add a Content-Length header with the correponding value
  */
-http_status init_response_content_length(response_head *serv_resp_hd);
+http_status_e init_response_content_length(response_head_t *serv_resp_hd);
 
 
 // -------------- Send logic ---------------------------------------------------------------------
@@ -71,7 +71,7 @@ http_status init_response_content_length(response_head *serv_resp_hd);
  * 
  * @warning Destination socket must be set in cfg_infos.
  */
-int send_raw_content(config_infos *cfg_infos, char *buf, size_t buf_len);
+int send_raw_content(config_infos_t *cfg_infos, char *buf, size_t buf_len);
 
 /**
  * @brief Sends response status and headers to the client.
@@ -83,6 +83,6 @@ int send_raw_content(config_infos *cfg_infos, char *buf, size_t buf_len);
  * 
  * @warning Destination socket must be set in cfg_infos.
  */
-int send_response_head(config_infos *cfg_infos, response_head *serv_resp_hd);
+int send_response_head(config_infos_t *cfg_infos, response_head_t *serv_resp_hd);
 
 #endif

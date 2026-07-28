@@ -1,9 +1,9 @@
 #include "ring_buffer.h"
 
 
-r_buffer *init_ring_buffer(size_t buf_size){
+ring_buffer_t *init_ring_buffer(size_t buf_size){
 
-    r_buffer *r_buf = (r_buffer*)malloc(sizeof(r_buffer));
+    ring_buffer_t *r_buf = (ring_buffer_t*)malloc(sizeof(ring_buffer_t));
     if(!r_buf) return NULL;
 
     r_buf->buf = (char*)malloc(buf_size);
@@ -20,7 +20,7 @@ r_buffer *init_ring_buffer(size_t buf_size){
 }
 
 
-void free_ring_buffer(r_buffer *r_buf){
+void free_ring_buffer(ring_buffer_t *r_buf){
     if(!r_buf) return;
     free(r_buf->buf);
     free(r_buf);
@@ -28,18 +28,18 @@ void free_ring_buffer(r_buffer *r_buf){
 }
 
 
-bool r_buffer_is_empty(r_buffer *r_buf){
+bool r_buffer_is_empty(ring_buffer_t *r_buf){
     if (!r_buf) return true;
     return r_buf->read_pos == r_buf->write_pos;
 }
 
-bool r_buffer_is_full(r_buffer *r_buf){
+bool r_buffer_is_full(ring_buffer_t *r_buf){
     if (!r_buf) return true;
     return (r_buf->write_pos + 1) % r_buf->buf_size == r_buf->read_pos;
 }
 
 
-size_t get_r_buffer_free_space(r_buffer *r_buf){
+size_t get_r_buffer_free_space(ring_buffer_t *r_buf){
 
     if (!r_buf) return 0;
 
@@ -52,7 +52,7 @@ size_t get_r_buffer_free_space(r_buffer *r_buf){
 }
 
 
-int read_from_r_buffer(r_buffer *r_buf, char *target){
+int read_from_r_buffer(ring_buffer_t *r_buf, char *target){
 
     if (!r_buf) return -1;
     if (!target) return -1;
@@ -68,7 +68,7 @@ int read_from_r_buffer(r_buffer *r_buf, char *target){
 }
 
 
-static int write_char_in_r_buffer(r_buffer *r_buf, char c){
+static int write_char_in_r_buffer(ring_buffer_t *r_buf, char c){
 
     if (!r_buf) return -1;
 
@@ -83,7 +83,7 @@ static int write_char_in_r_buffer(r_buffer *r_buf, char c){
 }
 
 
-int write_string_in_r_buffer(r_buffer *r_buf, char *s, size_t s_len){
+int write_string_in_r_buffer(ring_buffer_t *r_buf, char *s, size_t s_len){
 
     if (!r_buf) return -1;
     if (!s) return -1;
