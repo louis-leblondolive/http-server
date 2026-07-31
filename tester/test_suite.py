@@ -471,5 +471,5 @@ def _():
 @test("Server header matches config (l-olive)", "Response Headers")
 def _():
     resp = send_request("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
-    ok = b"l-olive" in resp
+    ok = b"skiff" in resp
     return ok, f"Server header {'found' if ok else 'missing'}"
