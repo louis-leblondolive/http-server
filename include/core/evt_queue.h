@@ -3,6 +3,7 @@
 
 
 #include <unistd.h>
+#include <stdint.h>
 
 #include "config.h"
 #include "ring_buffer.h"
