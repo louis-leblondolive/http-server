@@ -1,16 +1,17 @@
-#ifndef CONFIG
+#ifndef CONFIG 
 #define CONFIG
 
 #include <stdbool.h>
 
 //  Server parameters
-#define SERVER_NAME "l-olive"
+#define SERVER_NAME "skiff"
 #define SERVER_VERSION "1.0"
 #define PORT "3490"
 #define BACKLOG 10
 #define DEFAULT_PATH "index.html"   // www_root is included automatically 
 #define TIMEOUT_SECONDS 5
 #define TIMEOUT_MILLISECONDS 0
+#define MAX_EVENTS 256
 
 //  HTTP parameters
 #define MAX_BODY_LEN          65536   // 64 KB
