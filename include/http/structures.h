@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 
 #include "config.h"
-
+#include "http_request.h"
 
 typedef enum http_status {
     HTTP_OK,
@@ -32,27 +32,6 @@ typedef enum http_status {
 
 } http_status_e;
 
-
-typedef struct header_s {
-    char key[MAX_HEADER_KEY_SIZE];
-    char value[MAX_HEADER_VALUE_SIZE];
-} header_t ;
-
-
-typedef struct request_s {
-    char method[MAX_METHOD_LEN];
-    char path[MAX_PATH_LEN];
-    char version[MAX_VERSION_LEN];
-
-    header_t headers[MAX_HEADER_NB];
-    int header_count;
-
-    char body[MAX_BODY_LEN];
-    size_t body_len;
-
-    char connection_type[MAX_HEADER_VALUE_SIZE];
-
-} request_t;
 
 
 typedef struct response_head_s {

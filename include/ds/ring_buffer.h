@@ -18,7 +18,7 @@ typedef struct ring_buffer_s {
 /** 
  * @brief Initializes an empty ring buffer.
  * @param buf_size Desired ring buffer size.
- * @return A pointer to a new ring buffer, of size `buf_size`.
+ * @return A pointer to a new ring buffer of size `buf_size`, or NULL on error. 
  * */
 ring_buffer_t *init_ring_buffer(size_t buf_size);
 

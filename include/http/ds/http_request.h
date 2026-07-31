@@ -1,0 +1,36 @@
+#ifndef HTTP_REQUEST
+#define HTTP_REQUEST
+
+#include <stdlib.h>
+
+#include "config.h"
+
+
+typedef struct header_s {
+    char key[MAX_HEADER_KEY_SIZE];
+    char value[MAX_HEADER_VALUE_SIZE];
+} header_t ;
+
+
+typedef struct request_s {
+    char method[MAX_METHOD_LEN];
+    char path[MAX_PATH_LEN];
+    char version[MAX_VERSION_LEN];
+
+    header_t headers[MAX_HEADER_NB];
+    int header_count;
+
+    char body[MAX_BODY_LEN];
+    size_t body_len;
+
+    char connection_type[MAX_HEADER_VALUE_SIZE];
+
+} request_t;
+
+
+
+request_t *init_http_request(void);
+void free_http_request(request_t *req);
+
+
+#endif
