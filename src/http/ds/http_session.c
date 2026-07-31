@@ -16,8 +16,8 @@ http_session_t *open_http_session(int client_fd){
         return NULL; 
     }
     
-    session->cur_req = (request_t*)malloc(sizeof(request_t));
-    if(!session->cur_req){
+    session->client_req = (request_t*)malloc(sizeof(request_t));
+    if(!session->client_req){
         free_ring_buffer(session->request_raw_buffer);
         free(session);
         return NULL;
@@ -25,13 +25,18 @@ http_session_t *open_http_session(int client_fd){
 
     if(init_session_timer(session) != 0){
         free_ring_buffer(session->request_raw_buffer);
-        free_http_request(session->cur_req);
+        free_http_request(session->client_req);
         free(session);
         return NULL;
     };
 
     session->client_fd = client_fd;
-    session->events = 0;
+    
+    session->parsing_complete = false;
+    session->parse_res = HTTP_OK;
+    session->parse_state = REQ_PARSING_METHOD;
+    session->total_bytes_parsed = 0;
+    session->pos = 0;
 
     return session;
 }
@@ -42,7 +47,7 @@ void close_http_session(http_session_t *session){
     if(!session) return;
 
     free_ring_buffer(session->request_raw_buffer);
-    free_http_request(session->cur_req);
+    free_http_request(session->client_req);
 
     close(session->client_fd);
     if(session->timer_fd >= 0) close(session->timer_fd);
@@ -65,10 +70,9 @@ int init_session_timer(http_session_t *session){
 int start_session_timer(http_session_t *session){
     if(!session) return 1;
 
-    event_t evt;
-    if(evt_init(&evt, TIMER_EVT, EVT_TIMER, (void*)session) != 0) return 1;
+    if(evt_init(&session->timer_event, TIMER_EVT, EVT_TIMER, (void*)session) != 0) return 1;
 
-    return evt_register(session->client_fd, &evt);
+    return evt_register(session->client_fd, &session->timer_event);
 }
 
 #endif  // __APPLE__
@@ -95,10 +99,9 @@ int start_session_timer(http_session_t *session){
 
     if(timerfd_settime(session->timer_fd, 0, &timeout, NULL) == -1) return 1;
 
-    event_t evt; 
-    if(evt_init(&evt, TIMER_EVT, EVT_TIMER, (void*)session) != 0) return 1;
+    if(evt_init(&session->timer_event, TIMER_EVT, EVT_TIMER, (void*)session) != 0) return 1;
 
-    return evt_register(session->timer_fd, &evt);
+    return evt_register(session->timer_fd, &session->timer_event);
 }
 
 

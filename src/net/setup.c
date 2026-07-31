@@ -47,5 +47,10 @@ int setup_server(void){
         return -1;
     }
 
+    if(listen(sock_fd, BACKLOG) == -1){
+        perror("server : listen");
+        exit(1);
+    }
+
     return sock_fd;
 }

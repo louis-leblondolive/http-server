@@ -3,21 +3,36 @@
 
 
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "evt_queue.h"
 #include "http_request.h"
 #include "ring_buffer.h"
+#include "parser.h"
 
 
 typedef struct http_session_s {
 
     int client_fd; 
+    event_t socket_event;
+
     int timer_fd;
+    event_t timer_event; 
 
-    uint32_t events;
-
+    // --- Request infos
+        // data storage
     ring_buffer_t *request_raw_buffer; 
-    request_t *cur_req;
+    request_t *client_req;
+
+        // parsing infos
+    bool parsing_complete; 
+    http_status_e parse_res; 
+    parsing_request_state_e parse_state; 
+    size_t total_bytes_parsed; 
+    size_t pos;
+
+    // --- Response infos
+    // ...
 
 } http_session_t;
 

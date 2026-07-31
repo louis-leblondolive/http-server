@@ -1,5 +1,5 @@
-#ifndef LISTENER
-#define LISTENER
+#ifndef REACTOR
+#define REACTOR
 
 
 #include <stdio.h>      
@@ -11,13 +11,13 @@
 #include <sys/socket.h>  
 #include <sys/wait.h>    
 #include <netinet/in.h>  
-#include <arpa/inet.h>   
-#include <signal.h>      
+#include <arpa/inet.h>     
 #include <unistd.h>      
 
 #include "config.h"
+#include "evt_queue.h"
 #include "structures.h"
-
+#include "http_session.h"
 #include "utils.h"
 #include "ring_buffer.h"
 #include "printer.h"
@@ -38,6 +38,6 @@
  * * @note This function contains an infinite loop and is not expected to return 
  * unless a fatal signal is received.
  */
-void listener(config_infos_t *cfg_infos, int sock_fd);
+void reactor(config_infos_t *cfg_infos, int server_fd);
 
 #endif

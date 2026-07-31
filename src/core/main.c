@@ -1,5 +1,5 @@
 #include "setup.h"
-#include "listener.h"
+#include "reactor.h"
 
 
 int main(int argc, char *argv[]){
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
-    listener(&cfg_infos, sock_fd);
+    reactor(&cfg_infos, sock_fd);
 
     return 0;
 }
