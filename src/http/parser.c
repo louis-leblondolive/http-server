@@ -29,7 +29,7 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                 if(cur_char == ' '){
                     
                     *parse_state = REQ_PARSING_METHOD_SEPARATOR;
-                    if(cfg_infos->verbose) print_debug("Parser - Parsed method : %s \n", parsed_request->method);
+                    
 
                 } else {
                     if(*pos >= MAX_METHOD_LEN) return HTTP_BAD_REQUEST;
@@ -53,6 +53,8 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                 *pos = 1;
                 *parse_state = REQ_PARSING_PATH;
 
+                if(cfg_infos->verbose) print_debug("Parser - Parsed method : %s \n", parsed_request->method);
+                
                 break;
                 
             
@@ -64,7 +66,6 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                 if(cur_char == ' '){
 
                    *parse_state = REQ_PARSING_PATH_SEPARATOR;
-                   if(cfg_infos->verbose) print_debug("Parser - Parsed path : %s \n", parsed_request->path);
 
                 } else {
                     if(*pos >= MAX_PATH_LEN) return HTTP_URI_TOO_LONG;
@@ -87,6 +88,8 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                     parsed_request->version[0] = cur_char;
                     *pos = 1;
                     *parse_state = REQ_PARSING_VERSION;
+
+                    if(cfg_infos->verbose) print_debug("Parser - Parsed path : %s \n", parsed_request->path);
 
                     break;
 
@@ -180,11 +183,12 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
 
                     parsed_request->headers[header_count].value[*pos] = '\0';
                     *pos = 0;
-                    parsed_request->header_count ++;
-
                     *parse_state = REQ_EXPECTING_LF;
+                    
                     if(cfg_infos->verbose) print_debug("Parser - Parsed header value : %s \n",
-                         parsed_request->headers[header_count - 1].value);
+                         parsed_request->headers[header_count].value);
+
+                    parsed_request->header_count ++;
                 }
                 else {
                     if(*pos >= MAX_HEADER_VALUE_SIZE) return HTTP_HEADER_TOO_LARGE;

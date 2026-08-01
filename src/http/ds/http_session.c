@@ -16,7 +16,7 @@ http_session_t *open_http_session(int client_fd){
         return NULL; 
     }
     
-    session->client_req = (request_t*)malloc(sizeof(request_t));
+    session->client_req = init_http_request();
     if(!session->client_req){
         free_ring_buffer(session->request_raw_buffer);
         free(session);
