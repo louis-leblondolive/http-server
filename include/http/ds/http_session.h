@@ -10,6 +10,11 @@
 #include "ring_buffer.h"
 #include "parser.h"
 
+typedef enum connection_type {
+    KEEP_ALIVE,
+    CLOSE
+} connection_type_e;
+
 
 typedef struct http_session_s {
 
@@ -18,6 +23,8 @@ typedef struct http_session_s {
 
     int timer_fd;
     event_t timer_event; 
+
+    connection_type_e connection_type; 
 
     // --- Request infos
         // data storage
@@ -40,6 +47,7 @@ typedef struct http_session_s {
 // ----- SESSION LIFECYCLE ----------------------------------------
 http_session_t *open_http_session(int client_fd);
 void close_http_session(http_session_t *session);
+void set_http_session_connection_type(http_session_t *session, connection_type_e connection_type);
 
 
 // ----- SESSION TIMEOUT MANAGEMENT -------------------------------

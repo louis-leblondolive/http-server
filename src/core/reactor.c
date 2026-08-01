@@ -101,7 +101,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
 
                 // Timeout 
                 if(evt->type == TIMER_EVT && evt->expect & EVT_TIMER){
-                    print_debug("Request timeout\n");
+                    if(!cfg_infos->quiet) print_debug("Request timeout\n");
                     close_http_session(session);
                     continue;
                 }
@@ -142,7 +142,24 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
 
                         // if session->parsing_complete, route and handle parsed request, then try to send the generated response and 
                         //      register to EVT_WRITE on failure
-                        print_info("Implement routing and handling here \n");
+                        if(session->parsing_complete){
+
+                            http_response_t serv_resp; 
+                            init_http_response(&serv_resp);
+
+                            int route_res = route_request(cfg_infos, session, &serv_resp);
+
+                            if(route_res != 0){
+                                printf("route error\n");
+                            }
+
+                            if(!cfg_infos->quiet){
+                                printf("Routing Complete - Generated Response: \n");
+                                print_response(&serv_resp);
+                            }
+
+                            // send logic here 
+                        }
                     }
 
                     print_info("Done parsing \n");

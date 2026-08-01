@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "compat.h"
-#include "structures.h"
+#include "http_request.h"
 #include "ring_buffer.h"
 #include "config.h"
 #include "printer.h"
@@ -95,9 +95,11 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
  * @note **Crucial**: A return of HTTP_OK does NOT mean the request is ready. 
  * Always check `*parsing_complete` before responding.
  */
+/*
 http_status_e parse_raw_cgi_response(config_infos_t *cfg_infos, ring_buffer_t *raw_response_buf, 
                             response_head_t *parsed_response_head, char *parsed_resp_body, 
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
                             bool *parsing_complete, parsing_response_state_e *parse_state, bool *has_body_length);
+*/
 
 #endif 

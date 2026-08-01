@@ -56,13 +56,16 @@ void print_request(request_t *r){
 }
 
 
-void print_response(response_head_t *r){
+void print_response(http_response_t *r){
     if(!r) return;
 
-    printf("%s %s %s\n", r->version, r->code, r->reason);
-    for (int i = 0; i < r->header_count; i++)
-    {
-        printf("%s: %s\n", r->headers[i].key, r->headers[i].value);
-    }
+    printf("%.*s", r->status_len, r->status);
+    
+    printf("%.*s", r->headers_len, r->headers);
+
     printf("\n");
+    printf("----- Body -----\n");
+    if(r->type == RAW_HTTP_RESP) printf("%.*s\n", r->content_lenght, r->content.raw_content);
+    else printf("Pointing to : %s\n", r->content.file_path);
+    printf("----- End of Body -----\n");
 }

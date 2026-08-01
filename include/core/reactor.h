@@ -16,7 +16,6 @@
 
 #include "config.h"
 #include "evt_queue.h"
-#include "structures.h"
 #include "http_session.h"
 #include "utils.h"
 #include "ring_buffer.h"

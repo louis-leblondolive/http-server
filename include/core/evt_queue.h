@@ -7,7 +7,6 @@
 
 #include "config.h"
 #include "ring_buffer.h"
-#include "structures.h"
 
 // warning : no event_free() because void* field may contain elaborate stuff
 

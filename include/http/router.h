@@ -1,11 +1,11 @@
 #ifndef ROUTER
 #define ROUTER
 
-#include <unistd.h>
-#include <sys/stat.h>
+
 
 #include "compat.h"
-#include "structures.h"
+#include "http_session.h"
+#include "http_response.h"
 #include "printer.h"
 #include "handler.h"
 
@@ -14,12 +14,10 @@
  * Checks request syntax and content, and delegates operations to handlers (GET, POST, etc.).
  * 
  * @param cfg_infos     Configuration infos (verbosity). Destination socket must be set.
- * @param client_req    Pointer to a parsed client request. Cannot be NULL.
- * @param error_flag :  used to pinpoint error that could have occured during parsing.
+ * @param session       Pointer to a client session. Cannot be NULL.
+ * @param serv_resp     Pointer to the server response for handlers to fill. Cannot be NULL.
  * @return              HTTP_OK if routing is successful, corresponding HTTP status otherwise.
- * 
- * @warning Destination socket must be set in `cfg_infos`.
  */
-int route_request(config_infos_t *cfg_infos, request_t *client_req, http_status_e error_flag);
+int route_request(config_infos_t *cfg_infos, http_session_t *session, http_response_t *serv_resp);
 
 #endif

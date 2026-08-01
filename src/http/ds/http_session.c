@@ -32,6 +32,8 @@ http_session_t *open_http_session(int client_fd){
 
     session->client_fd = client_fd;
     
+    session->connection_type = KEEP_ALIVE;
+
     session->parsing_complete = false;
     session->parse_res = HTTP_OK;
     session->parse_state = REQ_PARSING_METHOD;
@@ -55,6 +57,10 @@ void close_http_session(http_session_t *session){
     free(session);
 }
 
+
+void set_http_session_connection_type(http_session_t *session, connection_type_e connection_type){
+    session->connection_type = connection_type;
+}
 
 // ----- SESSION TIMEOUT MANAGEMENT ---------------------------------
 // --- macOS behaviour ----------

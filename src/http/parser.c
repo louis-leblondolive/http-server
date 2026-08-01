@@ -266,7 +266,7 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
 }
 
 
-
+/*
 http_status_e parse_raw_cgi_response(config_infos_t *cfg_infos, ring_buffer_t *raw_response_buf, 
                             response_head_t *parsed_response_head, char *parsed_resp_body,
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
@@ -462,3 +462,4 @@ http_status_e parse_raw_cgi_response(config_infos_t *cfg_infos, ring_buffer_t *r
     }
     return HTTP_OK;
 }
+    */
