@@ -59,13 +59,13 @@ void print_request(request_t *r){
 void print_response(http_response_t *r){
     if(!r) return;
 
-    printf("%.*s", r->status_len, r->status);
+    printf("%.*s", (int)r->status_len, r->status);
     
-    printf("%.*s", r->headers_len, r->headers);
+    printf("%.*s", (int)r->headers_len, r->headers);
 
     printf("\n");
     printf("----- Body -----\n");
-    if(r->type == RAW_HTTP_RESP) printf("%.*s\n", r->content_lenght, r->content.raw_content);
+    if(r->type == RAW_HTTP_RESP) printf("%.*s\n", (int)r->content_lenght, r->content.raw_content);
     else printf("Pointing to : %s\n", r->content.file_path);
     printf("----- End of Body -----\n");
 }

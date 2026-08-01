@@ -10,35 +10,45 @@ http_session_t *open_http_session(int client_fd){
     http_session_t *session = (http_session_t*)malloc(sizeof(http_session_t));
     if(!session) return NULL;
 
+    session->client_fd = client_fd;
+    
+    if(init_session_timer(session) != 0){
+        free(session); return NULL;
+    };
+
+    session->connection_type = KEEP_ALIVE;
+
+    // Request infos 
     session->request_raw_buffer = init_ring_buffer(2 * MAX_REQUEST_LEN);
     if(!session->request_raw_buffer){ 
+        if(session->timer_fd >= 0) close(session->timer_fd);
         free(session); 
         return NULL; 
     }
     
     session->client_req = init_http_request();
     if(!session->client_req){
+        if(session->timer_fd >= 0) close(session->timer_fd);
         free_ring_buffer(session->request_raw_buffer);
         free(session);
         return NULL;
     }
-
-    if(init_session_timer(session) != 0){
-        free_ring_buffer(session->request_raw_buffer);
-        free_http_request(session->client_req);
-        free(session);
-        return NULL;
-    };
-
-    session->client_fd = client_fd;
-    
-    session->connection_type = KEEP_ALIVE;
 
     session->parsing_complete = false;
     session->parse_res = HTTP_OK;
     session->parse_state = REQ_PARSING_METHOD;
     session->total_bytes_parsed = 0;
     session->pos = 0;
+
+    // Response infos
+    session->resp_queue = http_resp_queue_init();
+    if(!session->resp_queue){
+        if(session->timer_fd >= 0) close(session->timer_fd);
+        free_ring_buffer(session->request_raw_buffer);
+        free_http_request(session->client_req);
+        free(session);
+        return NULL;
+    }
 
     return session;
 }
@@ -48,18 +58,23 @@ void close_http_session(http_session_t *session){
 
     if(!session) return;
 
+    close(session->client_fd);
+    if(session->timer_fd >= 0) close(session->timer_fd);
+
     free_ring_buffer(session->request_raw_buffer);
     free_http_request(session->client_req);
 
-    close(session->client_fd);
-    if(session->timer_fd >= 0) close(session->timer_fd);
+    http_resp_queue_free(session->resp_queue);
 
     free(session);
 }
 
 
 void set_http_session_connection_type(http_session_t *session, connection_type_e connection_type){
-    session->connection_type = connection_type;
+
+    if(session->connection_type != CLOSE){
+        session->connection_type = connection_type;
+    }
 }
 
 // ----- SESSION TIMEOUT MANAGEMENT ---------------------------------

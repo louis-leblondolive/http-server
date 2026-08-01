@@ -121,3 +121,101 @@ http_status_e init_response_content(http_response_t *serv_resp, http_response_ty
     
     return HTTP_OK;
 }
+
+
+// ---------- RESPONSE QUEUE NODE MANAGEMENT ------------------------------------------------------
+http_response_qnode_t *http_resp_qnode_init(void){
+
+    http_response_qnode_t *node = (http_response_qnode_t*)malloc(sizeof(http_response_qnode_t));
+    if(!node) return NULL;
+
+    init_http_response(&node->response);
+
+    node->n_status_sent = 0;
+    node->n_headers_sent = 0;
+    node->n_content_sent = 0;
+
+    node->next = NULL;
+
+    return node;
+}
+
+
+void http_resp_qnode_free(http_response_qnode_t *node){
+    free(node);
+}
+
+
+// ---------- RESPONSE QUEUE MANAGEMENT ------------------------------------------------------
+http_response_queue_t *http_resp_queue_init(void){
+
+    http_response_queue_t *queue = (http_response_queue_t*)malloc(sizeof(http_response_queue_t));
+    if(!queue) return NULL;
+
+    queue->head = NULL;
+    queue->last = NULL;
+
+    return queue;
+}
+
+
+void http_resp_queue_free(http_response_queue_t *queue){
+
+    if(!queue) return;
+
+    http_response_qnode_t *node = queue->head;
+    while(node){
+        http_response_qnode_t *next = node->next;
+        http_resp_qnode_free(node);
+        node = next;
+    }
+    free(queue);
+}
+
+
+bool http_resp_queue_is_empty(http_response_queue_t *queue){
+    if(!queue) return true;
+    return queue->head == NULL;
+}
+
+
+int http_resp_queue_add(http_response_queue_t *queue, http_response_qnode_t *node){
+
+    if(!queue || !node) return 1;
+
+    node->next = NULL;
+
+    if(!queue->head){ // queue is empty 
+        queue->head = node;
+        queue->last = node;
+    }
+
+    else {
+        if(!queue->last) return 1;
+
+        queue->last->next = node;
+        queue->last = node;
+    }
+
+    return 0;
+}
+
+
+http_response_qnode_t *http_resp_queue_pop(http_response_queue_t *queue){
+
+    if(!queue || !queue->head) return NULL;
+
+    http_response_qnode_t *pop = queue->head; 
+
+    if(queue->head == queue->last){
+        queue->head = NULL;
+        queue->last = NULL;
+    } 
+    else {
+        queue->head = queue->head->next; 
+    }
+
+    pop->next = NULL; 
+
+    return pop;
+}

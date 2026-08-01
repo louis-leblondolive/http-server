@@ -16,13 +16,17 @@
 
 #include "config.h"
 #include "evt_queue.h"
+
 #include "http_session.h"
-#include "utils.h"
+#include "http_response.h"
+
 #include "ring_buffer.h"
-#include "printer.h"
+
 #include "parser.h"
 #include "router.h"
-#include "response.h"
+
+#include "utils.h"
+#include "printer.h"
 
 /**
  * @brief Main loop listening for any incoming connections and managing client processes.

@@ -35,10 +35,6 @@ typedef struct config_infos_s {
     bool quiet;
     bool verbose;
 
-    // communication parameters
-    int client_fd;
-    char connection_type[MAX_HEADER_VALUE_SIZE];
-
     // session parameters
     char www_root[MAX_PATH_LEN];
 

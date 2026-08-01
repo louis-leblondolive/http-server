@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 
@@ -42,6 +43,26 @@ typedef struct http_response_s {
 } http_response_t;
 
 
+typedef struct http_response_qnode_s {
+
+    http_response_t response;
+    
+    size_t n_status_sent;
+    size_t n_headers_sent;
+    size_t n_content_sent;
+
+    struct http_response_qnode_s *next;
+
+} http_response_qnode_t;
+
+
+typedef struct http_response_queue_s {
+
+    http_response_qnode_t *head;
+    http_response_qnode_t *last;
+} http_response_queue_t;
+
+
 // ---------- RESPONSE MANAGEMENT -----------------------------------------------------------
 /**
  * @brief Initialize all http response fields
@@ -74,6 +95,19 @@ http_status_e init_response_default_headers(http_response_t *serv_resp);
 
 http_status_e init_response_content(http_response_t *serv_resp, http_response_type_e resp_type, char *content, 
     size_t content_len, size_t content_len_header);
+
+
+// ---------- RESPONSE QUEUE NODE MANAGEMENT ------------------------------------------------------
+http_response_qnode_t *http_resp_qnode_init(void);
+void http_resp_qnode_free(http_response_qnode_t *node);
+
+// ---------- RESPONSE QUEUE MANAGEMENT -----------------------------------------------------------
+http_response_queue_t *http_resp_queue_init(void);
+void http_resp_queue_free(http_response_queue_t *queue);
+bool http_resp_queue_is_empty(http_response_queue_t *queue);
+int http_resp_queue_add(http_response_queue_t *queue, http_response_qnode_t *node);
+http_response_qnode_t *http_resp_queue_pop(http_response_queue_t *queue);
+
 
 
 #endif

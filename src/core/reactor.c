@@ -127,9 +127,10 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     }
 
 
-                    // --- Request parsing ----------
+                    // --- Data processing ----------
                     while(!r_buffer_is_empty(session->request_raw_buffer)){
 
+                        // --- Parsing -----
                         session->parse_res = parse_raw_request(cfg_infos, session->request_raw_buffer,
                             session->client_req, bytes_received, &session->total_bytes_parsed, &session->pos, 
                             &session->parsing_complete, &session->parse_state);
@@ -140,31 +141,64 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                             print_request(session->client_req);
                         }
 
-                        // if session->parsing_complete, route and handle parsed request, then try to send the generated response and 
-                        //      register to EVT_WRITE on failure
+                        // --- Process parsed request -----
                         if(session->parsing_complete){
 
-                            http_response_t serv_resp; 
-                            init_http_response(&serv_resp);
+                            // --- Setup -----
+                            if(strncmp(session->client_req->connection_type, "close", MAX_HEADER_VALUE_SIZE) == 0){
+                                set_http_session_connection_type(session, CLOSE);
+                                // keep-alive is set by default 
+                            }
 
-                            int route_res = route_request(cfg_infos, session, &serv_resp);
+                            http_response_qnode_t *resp_node = http_resp_qnode_init();
+                            if(!resp_node){
+                                close_http_session(session); continue;
+                            }
+
+                            // --- Route request -----
+                            int route_res = route_request(cfg_infos, session, &resp_node->response);
 
                             if(route_res != 0){
-                                printf("route error\n");
+                                http_resp_qnode_free(resp_node);
+                                close_http_session(session); continue;
                             }
-
-                            if(!cfg_infos->quiet){
+                            if(cfg_infos->verbose){
                                 printf("Routing Complete - Generated Response: \n");
-                                print_response(&serv_resp);
+                                print_response(&resp_node->response);
                             }
 
-                            // send logic here 
-                        }
+
+                            // --- Send response -----
+                            bool send_successful = false; 
+
+                            if(http_resp_queue_is_empty(session->resp_queue)){
+                                printf("trying to send response\n");
+                                send_successful = true;
+                                // if send ok send_successful = true
+                            }
+
+                            if(!send_successful){
+                                if(http_resp_queue_add(session->resp_queue, resp_node) != 0){
+                                    http_resp_qnode_free(resp_node);
+                                    close_http_session(session); continue; 
+                                }
+
+                                evt->expect = EVT_WRITE;
+                                if(evt_register(session->client_fd, evt) != 0){
+                                    print_error("Server error: couldn't add client event to the event queue\n");
+                                    close_http_session(session); continue;
+                                }
+                            }
+                
+                        } // done processing parsed request 
+
+                    } // done reading client data
+
+                    // Connection type is CLOSE 
+                    if(session->connection_type == CLOSE){
+                        close_http_session(session); continue;
                     }
 
-                    print_info("Done parsing \n");
-
-                    // if close connection continue
                     evt->expect = EVT_READ; 
                     if(evt_register(session->client_fd, evt) != 0){
                         print_error("Server error: couldn't add client event to the event queue\n");

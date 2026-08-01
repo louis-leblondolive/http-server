@@ -7,6 +7,7 @@
 
 #include "evt_queue.h"
 #include "http_request.h"
+#include "http_response.h"
 #include "ring_buffer.h"
 #include "parser.h"
 
@@ -39,7 +40,8 @@ typedef struct http_session_s {
     size_t pos;
 
     // --- Response infos
-    // ...
+    http_response_queue_t *resp_queue;
+    
 
 } http_session_t;
 
