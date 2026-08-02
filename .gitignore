@@ -3,6 +3,7 @@
 .vscode
 /build
 /obj
+/tmp
 
 # Python 
 tester/.venv
