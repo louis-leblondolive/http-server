@@ -162,7 +162,7 @@ int start_session_timer(http_session_t *session){
 
     if(evt_init(&session->timer_event, TIMER_EVT, EVT_TIMER, (void*)session) != 0) return 1;
 
-    return evt_register(session->timer_fd, &session->timer_event);
+    return evt_register(session->timer_fd, &session->timer_event, false);
 }
 
 
