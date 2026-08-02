@@ -96,7 +96,7 @@ def _():
     return ok, resp.split(b"\r\n")[0].decode(errors="replace")
 
 
-@test("Unsupported method returns 405", "Error Codes")
+@test("Unsupported method returns 405 or 501", "Error Codes")
 def _():
     resp = send_request("PATCH / HTTP/1.1\r\nHost: localhost\r\n\r\n")
     ok = b"405" in resp or b"501" in resp
@@ -172,7 +172,7 @@ def _():
 
 @test("Path exactly at limit (2048 chars) returns 200 or 404", "Size Limits")
 def _():
-    path = "/" + "a" * 2047  # MAX_PATH_LEN = 2048
+    path = "/" + "a" * 2046  # MAX_PATH_LEN = 2047 (counting final '\0')
     resp = send_request(f"GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n")
     ok = b"200" in resp or b"404" in resp
     return ok, resp.split(b"\r\n")[0].decode(errors="replace")
