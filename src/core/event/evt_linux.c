@@ -23,7 +23,7 @@ int evt_init(event_t *ev, event_type_e ev_type, uint16_t ev_expect, void *ev_dat
 }
 
 
-int evt_register(int ev_fd, event_t *ev){
+int evt_register(int ev_fd, event_t *ev, bool ev_delete){
 
     if(!ev) return 1;
 
@@ -48,7 +48,9 @@ int evt_register(int ev_fd, event_t *ev){
     epl_ev_mask |= EPOLLONESHOT;    
     epl_ev.events = epl_ev_mask;
 
-    if(epoll_ctl(evt_queue, EPOLL_CTL_ADD, ev_fd, &epl_ev) == -1){
+    uint32_t ctl_flag = (ev_delete) ? EPOLL_CTL_DEL : EPOLL_CTL_ADD;
+
+    if(epoll_ctl(evt_queue, ctl_flag, ev_fd, &epl_ev) == -1){
 
         if(errno == EEXIST && epoll_ctl(evt_queue, EPOLL_CTL_MOD, ev_fd, &epl_ev) != -1){
             return 0;
@@ -88,7 +90,11 @@ int evt_queue_wait(event_t **event_list, int n_events){
         event_list[i]->expect = 0;   
 
         // Connection closed or error
-        if(epoll_evs[i].events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)){
+        if(epoll_evs[i].events & EPOLLERR){
+            event_list[i]->expect |= EVT_ERROR;
+        }
+        
+        if(epoll_evs[i].events & (EPOLLHUP | EPOLLRDHUP)){
             event_list[i]->expect |= EVT_CLOSE;
         }
 

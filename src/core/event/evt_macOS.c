@@ -22,9 +22,11 @@ int evt_init(event_t *ev, event_type_e ev_type, uint16_t ev_expect, void *ev_dat
 }
 
 
-int evt_register(int ev_fd, event_t *ev){
+int evt_register(int ev_fd, event_t *ev, bool ev_delete){
 
     if(!ev) return 1;
+
+    uint16_t flags = (ev_delete) ? EV_DELETE : EV_ADD | EV_ONESHOT;
 
     struct kevent k_ev_changes[2];
     int n_changes = 0;
@@ -33,12 +35,12 @@ int evt_register(int ev_fd, event_t *ev){
 
         case SOCKET_EVT:
             if(ev->expect & EVT_READ){
-                EV_SET(&k_ev_changes[n_changes], ev_fd, EVFILT_READ, EV_ADD | EV_ONESHOT, 0, 0, (void*) ev);
+                EV_SET(&k_ev_changes[n_changes], ev_fd, EVFILT_READ, flags, 0, 0, (void*) ev);
                 n_changes ++;
             }
     
             if(ev->expect & EVT_WRITE){
-                EV_SET(&k_ev_changes[n_changes], ev_fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, (void*) ev);
+                EV_SET(&k_ev_changes[n_changes], ev_fd, EVFILT_WRITE, flags, 0, 0, (void*) ev);
                 n_changes ++;
             }
 
@@ -52,7 +54,7 @@ int evt_register(int ev_fd, event_t *ev){
             int us_time_out = (TIMEOUT_SECONDS + (TIMEOUT_MILLISECONDS / 1000)) * 1000000 
                             + (TIMEOUT_MILLISECONDS % 1000) * 1000;
 
-            EV_SET(&k_ev_changes[0], ev_fd, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS, us_time_out, (void*) ev);
+            EV_SET(&k_ev_changes[0], ev_fd, EVFILT_TIMER, flags, NOTE_USECONDS, us_time_out, (void*) ev);
             if(kevent(evt_queue, &k_ev_changes[0], 1, NULL, 0, NULL) == -1){
                 return 1;
             }

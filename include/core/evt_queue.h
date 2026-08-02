@@ -2,6 +2,7 @@
 #define EVT_QUEUE
 
 
+#include <stdbool.h>
 #include <unistd.h>
 #include <stdint.h>
 
@@ -33,7 +34,7 @@ typedef struct event_s {
 
 
 int evt_init(event_t *ev, event_type_e ev_type, uint16_t ev_expect, void *ev_data);
-int evt_register(int ev_fd, event_t *ev);
+int evt_register(int ev_fd, event_t *ev, bool ev_delete);
 
 int init_evt_queue(void);
 void close_evt_queue(void);
