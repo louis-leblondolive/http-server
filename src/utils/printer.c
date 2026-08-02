@@ -53,6 +53,7 @@ void print_request(request_t *r){
     } else {
         printf("Long body (length > 2000)\n");
     }
+    printf("\n");
 }
 
 
@@ -68,4 +69,5 @@ void print_response(http_response_t *r){
     if(r->type == RAW_HTTP_RESP) printf("%.*s\n", (int)r->content_lenght, r->content.raw_content);
     else printf("Pointing to : %s\n", r->content.file_path);
     printf("----- End of Body -----\n");
+    printf("\n");
 }
