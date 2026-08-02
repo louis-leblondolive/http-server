@@ -19,7 +19,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
 
     event_t server_evt;
     if(evt_init(&server_evt, SOCKET_EVT, EVT_READ, (void*)server_session) != 0
-    || evt_register(server_fd, &server_evt) != 0){
+    || evt_register(server_fd, &server_evt, false) != 0){
         print_error("Server error: couldn't initialize server event system\n");
         close_evt_queue();
         close_http_session(server_session);
@@ -74,7 +74,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     free(str_client_addr); 
 
                     if(evt_init(&client_session->socket_event, SOCKET_EVT, EVT_READ, (void*)client_session) != 0
-                    || evt_register(client_fd, &client_session->socket_event) != 0){
+                    || evt_register(client_fd, &client_session->socket_event, false) != 0){
 
                         print_error("Server error: Couldn't add client event to the event queue\n");
                         close_http_session(client_session);
@@ -88,7 +88,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     }
                 }
 
-                if(evt_register(server_fd, &server_evt) != 0){
+                if(evt_register(server_fd, &server_evt, false) != 0){
                     print_error("Server: Couldn't register to event queue\n");
                     break;
                 }
@@ -137,17 +137,18 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                             session->client_req, bytes_received, &session->total_bytes_parsed, &session->pos, 
                             &session->parsing_complete, &session->parse_state);
 
-                        if(!cfg_infos->quiet){
+                        if(cfg_infos->verbose){
                             print_info("Parsed request (parsing_complete = %d, parse_res = %d):\n", 
                                 session->parsing_complete, session->parse_res);
                             print_request(session->client_req);
                         }
 
                         // --- Process parsed request -----
-                        if(session->parsing_complete){
+                        if(session->parsing_complete || session->parse_res != HTTP_OK){
 
                             // --- Setup -----
-                            if(strncmp(session->client_req->connection_type, "close", MAX_HEADER_VALUE_SIZE) == 0){
+                            if(session->parsing_complete
+                                 && strncmp(session->client_req->connection_type, "close", MAX_HEADER_VALUE_SIZE) == 0){
                                 set_http_session_connection_type(session, CLOSE);
                                 // keep-alive is set by default 
                             }
@@ -196,7 +197,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                                 }
 
                                 evt->expect = EVT_WRITE;
-                                if(evt_register(session->client_fd, evt) != 0){
+                                if(evt_register(session->client_fd, evt, false) != 0){
                                     if(cfg_infos->verbose) print_error("Couldn't add client WRITE event to the event queue\n");
                                     close_session = true; break;
                                 }
@@ -218,7 +219,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     }
 
                     evt->expect = EVT_READ; 
-                    if(evt_register(session->client_fd, evt) != 0){
+                    if(evt_register(session->client_fd, evt, false) != 0){
                         if(cfg_infos->verbose) print_error("Couldn't add client event to the event queue\n");
                         close_http_session(session); continue;
                     }
@@ -239,7 +240,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
 
                     if(!http_resp_queue_is_empty(session->resp_queue)){
                         evt->expect = EVT_WRITE; 
-                        if(evt_register(session->client_fd, evt) != 0){
+                        if(evt_register(session->client_fd, evt, false) != 0){
                             print_error("Server error: couldn't add client event to the event queue\n");
                             close_http_session(session); continue;
                         }

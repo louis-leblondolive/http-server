@@ -26,11 +26,9 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                 if(cur_char == '\r' || cur_char == '\n')
                     return HTTP_BAD_REQUEST;
 
-                if(cur_char == ' '){
-                    
+                if(cur_char == ' '){    
                     *parse_state = REQ_PARSING_METHOD_SEPARATOR;
                     
-
                 } else {
                     if(*pos >= MAX_METHOD_LEN) return HTTP_BAD_REQUEST;
 
@@ -48,6 +46,8 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                 if(cur_char == ' ') return HTTP_BAD_REQUEST; 
                 // only one space allowed between method and path 
 
+                if(*pos >= MAX_METHOD_LEN) return HTTP_BAD_REQUEST;
+
                 parsed_request->method[*pos] = '\0';
                 parsed_request->path[0] = cur_char;
                 *pos = 1;
@@ -64,7 +64,6 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                     return HTTP_BAD_REQUEST;
 
                 if(cur_char == ' '){
-
                    *parse_state = REQ_PARSING_PATH_SEPARATOR;
 
                 } else {
@@ -84,20 +83,24 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                 if(cur_char == ' ') return HTTP_BAD_REQUEST; 
                     // only one space allowed between method and path 
 
-                    parsed_request->path[*pos] = '\0';
-                    parsed_request->version[0] = cur_char;
-                    *pos = 1;
-                    *parse_state = REQ_PARSING_VERSION;
+                if(*pos >= MAX_PATH_LEN) return HTTP_BAD_REQUEST;
 
-                    if(cfg_infos->verbose) print_debug("Parser - Parsed path : %s \n", parsed_request->path);
+                parsed_request->path[*pos] = '\0';
+                parsed_request->version[0] = cur_char;
+                *pos = 1;
+                *parse_state = REQ_PARSING_VERSION;
 
-                    break;
+                if(cfg_infos->verbose) print_debug("Parser - Parsed path : %s \n", parsed_request->path);
+
+                break;
 
             
             case REQ_PARSING_VERSION:
 
                 if(cur_char == '\n') return HTTP_BAD_REQUEST;
                 if(cur_char == '\r'){
+
+                    if(*pos >= MAX_VERSION_LEN) return HTTP_BAD_REQUEST;
 
                     parsed_request->version[*pos] = '\0';
                     *pos = 0;
@@ -148,6 +151,8 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
                     if(parsed_request->headers[header_count].key[*pos - 1] == ' ') 
                         return HTTP_BAD_REQUEST;           
                         // white space before ':' is forbidden 
+
+                    if(*pos >= MAX_HEADER_KEY_SIZE) return HTTP_BAD_REQUEST;
 
                     parsed_request->headers[header_count].key[*pos] = '\0';
                     *pos = 0;

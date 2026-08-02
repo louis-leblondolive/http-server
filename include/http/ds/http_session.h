@@ -65,6 +65,6 @@ int init_session_timer(http_session_t *session);
 // restarts the timer if it is already running 
 int start_session_timer(http_session_t *session);
 
-void close_session_timer(http_session_t *session);
+int close_session_timer(http_session_t *session);
 
 #endif

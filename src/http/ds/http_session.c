@@ -14,9 +14,9 @@ http_session_t *open_http_session(int client_fd){
 
     session->client_fd = client_fd;
     
-    //if(init_session_timer(session) != 0){
-    //    free(session); return NULL;
-    //};
+    if(init_session_timer(session) != 0){
+        free(session); return NULL;
+    };
 
     session->connection_type = KEEP_ALIVE;
 
@@ -67,7 +67,7 @@ void close_http_session(http_session_t *session){
     http_resp_queue_free(session->resp_queue);
 
     close(session->client_fd);
-    if(session->timer_fd >= 0) close(session->timer_fd);
+    close_session_timer(session);
 
     free_ring_buffer(session->request_raw_buffer);
     free_http_request(session->client_req);
@@ -91,10 +91,16 @@ int reset_http_session_request_info(http_session_t *session){
     session->client_req->method[0] = '\0';
     session->client_req->path[0] = '\0';
     session->client_req->version[0] = '\0';
-    session->client_req->header_count = 0;
     session->client_req->body[0] = '\0';
-    session->client_req->body_len = 0;
     session->client_req->connection_type[0] = '\0';
+
+    for (size_t i = 0; i < MAX_HEADER_NB; i++){
+        session->client_req->headers[i].key[0] = '\0';
+        session->client_req->headers[i].value[0] = '\0';
+    }
+
+    session->client_req->header_count = 0;
+    session->client_req->body_len = 0;
 
     session->parsing_complete = false;
     session->parse_res = HTTP_OK;
@@ -121,7 +127,13 @@ int start_session_timer(http_session_t *session){
 
     if(evt_init(&session->timer_event, TIMER_EVT, EVT_TIMER, (void*)session) != 0) return 1;
 
-    return evt_register(session->client_fd, &session->timer_event);
+    return evt_register(session->client_fd, &session->timer_event, false);
+}
+
+
+int close_session_timer(http_session_t *session){
+    if(!session) return 1;
+    return evt_register(session->client_fd, &session->timer_event, true);
 }
 
 #endif  // __APPLE__
@@ -151,6 +163,12 @@ int start_session_timer(http_session_t *session){
     if(evt_init(&session->timer_event, TIMER_EVT, EVT_TIMER, (void*)session) != 0) return 1;
 
     return evt_register(session->timer_fd, &session->timer_event);
+}
+
+
+int close_session_timer(http_session_t *session){
+    if(session->timer_fd > 0) close(session->timer_fd); 
+    return 0;
 }
 
 
