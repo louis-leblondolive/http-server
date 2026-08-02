@@ -77,6 +77,23 @@ http_status_e init_response_default_headers(http_response_t *serv_resp){
 }
 
 
+http_status_e init_response_crlf(http_response_t *serv_resp){
+
+    if(!serv_resp) return HTTP_INTERNAL_ERROR;
+
+    size_t available_buf_space = MAX_RESPONSE_HEADERS_LEN - serv_resp->headers_len;
+    if(available_buf_space < 3) return HTTP_INTERNAL_ERROR;
+
+    int n_print = snprintf(serv_resp->headers + serv_resp->headers_len, 3, "\r\n");
+
+    if(n_print < 0 || (size_t)n_print >= 3) return HTTP_INTERNAL_ERROR;
+
+    serv_resp->headers_len += (size_t)n_print;
+
+    return HTTP_OK;
+}
+
+
 http_status_e init_response_content(http_response_t *serv_resp, http_response_type_e resp_type, char *content, 
     size_t content_len, size_t content_len_header){
 
@@ -135,6 +152,8 @@ http_response_qnode_t *http_resp_qnode_init(void){
     node->n_headers_sent = 0;
     node->n_content_sent = 0;
 
+    node->file_fd = -1;
+
     node->next = NULL;
 
     return node;
@@ -142,6 +161,7 @@ http_response_qnode_t *http_resp_qnode_init(void){
 
 
 void http_resp_qnode_free(http_response_qnode_t *node){
+    if(node->file_fd >= 0) close(node->file_fd);
     free(node);
 }
 

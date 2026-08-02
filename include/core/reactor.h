@@ -24,6 +24,7 @@
 
 #include "parser.h"
 #include "router.h"
+#include "responder.h"
 
 #include "utils.h"
 #include "printer.h"

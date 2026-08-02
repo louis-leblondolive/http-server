@@ -35,5 +35,7 @@ int handle_error(config_infos_t *cfg_infos, http_session_t *session, http_respon
         if(init_response_content(serv_resp, RAW_HTTP_RESP, body, strlen(body), strlen(body)) != HTTP_OK) return -1;
     }
     
+    if(init_response_crlf(serv_resp) != HTTP_OK) return -1;
+
     return 0;
 }

@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "http_codes.h"
@@ -51,6 +52,8 @@ typedef struct http_response_qnode_s {
     size_t n_headers_sent;
     size_t n_content_sent;
 
+    int file_fd; 
+
     struct http_response_qnode_s *next;
 
 } http_response_qnode_t;
@@ -92,7 +95,7 @@ http_status_e add_header(http_response_t *serv_resp, char *key, char *value);
  */
 http_status_e init_response_default_headers(http_response_t *serv_resp);
 
-
+http_status_e init_response_crlf(http_response_t *serv_resp);
 http_status_e init_response_content(http_response_t *serv_resp, http_response_type_e resp_type, char *content, 
     size_t content_len, size_t content_len_header);
 

@@ -45,8 +45,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
             // Server event 
             if(session->client_fd == server_fd){    
 
-                if(evt->expect & EVT_CLOSE){        // Event error 
-                    
+                if(evt->expect & EVT_ERROR || evt->expect & EVT_CLOSE){        // Event error     
                     print_error("Server: Fatal event system error\n");
                     break;
                 }
@@ -81,6 +80,12 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                         close_http_session(client_session);
                         continue;
                     }
+
+                    // Restart timeout timer
+                    if(start_session_timer(client_session) != 0){
+                        if(!cfg_infos->quiet) print_error("Server error: couldn't start client timeout timer\n");
+                        close_http_session(client_session);
+                    }
                 }
 
                 if(evt_register(server_fd, &server_evt) != 0){
@@ -93,15 +98,9 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
             // Client event 
             else {
 
-                // Event error or connection closed by client 
-                if(evt->expect & EVT_CLOSE){
-                    close_http_session(session);
-                    continue;
-                }
-
-                // Timeout 
-                if(evt->type == TIMER_EVT && evt->expect & EVT_TIMER){
-                    if(!cfg_infos->quiet) print_debug("Request timeout\n");
+                // Event system failure 
+                if(evt->expect & EVT_ERROR){
+                    if(cfg_infos->verbose) print_error("Error during event filtering\n");
                     close_http_session(session);
                     continue;
                 }
@@ -115,7 +114,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     
                     if(bytes_received == 0){
                         if (!cfg_infos->quiet) print_info("Server : peer closed its half side of the connection\n");
-                        close_http_session(session); continue;
+                        set_http_session_connection_type(session, CLOSE);
                     }
                     if(bytes_received == -1){
                         perror("server: recv");
@@ -123,11 +122,14 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     }
 
                     if(write_string_in_r_buffer(session->request_raw_buffer, recv_buf, bytes_received) != 0){
+                        if(cfg_infos->verbose) print_error("Couldn't write client data to ring buffer\n");
                         close_http_session(session); continue;
                     }
 
 
                     // --- Data processing ----------
+                    bool close_session = false;
+
                     while(!r_buffer_is_empty(session->request_raw_buffer)){
 
                         // --- Parsing -----
@@ -152,7 +154,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
 
                             http_response_qnode_t *resp_node = http_resp_qnode_init();
                             if(!resp_node){
-                                close_http_session(session); continue;
+                                close_session = true; break;
                             }
 
                             // --- Route request -----
@@ -160,51 +162,68 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
 
                             if(route_res != 0){
                                 http_resp_qnode_free(resp_node);
-                                close_http_session(session); continue;
+                                close_session = true; break;
                             }
+
+                            // --- Send response -----
                             if(cfg_infos->verbose){
-                                printf("Routing Complete - Generated Response: \n");
+                                print_debug("Sending response : \n");
                                 print_response(&resp_node->response);
                             }
 
-
-                            // --- Send response -----
                             bool send_successful = false; 
 
                             if(http_resp_queue_is_empty(session->resp_queue)){
-                                printf("trying to send response\n");
-                                send_successful = true;
-                                // if send ok send_successful = true
+
+                                if(send_http_resp_qnode(session->client_fd, resp_node) != 0){
+                                    http_resp_qnode_free(resp_node);
+                                    if(cfg_infos->verbose) print_error("Couldn't send http qnode\n");
+                                    close_session = true; break;
+                                }
+
+                                send_successful = http_resp_qnode_is_sent(resp_node);
                             }
 
-                            if(!send_successful){
+                            if(send_successful){
+                                if(cfg_infos->verbose) print_debug("Successfully sent response\n");
+                                http_resp_qnode_free(resp_node);
+                            }
+                            else{
                                 if(http_resp_queue_add(session->resp_queue, resp_node) != 0){
                                     http_resp_qnode_free(resp_node);
-                                    close_http_session(session); continue; 
+                                    if(cfg_infos->verbose) print_error("Couldn't add http qnode to queue\n");
+                                    close_session = true; break; 
                                 }
 
                                 evt->expect = EVT_WRITE;
                                 if(evt_register(session->client_fd, evt) != 0){
-                                    print_error("Server error: couldn't add client event to the event queue\n");
-                                    close_http_session(session); continue;
+                                    if(cfg_infos->verbose) print_error("Couldn't add client WRITE event to the event queue\n");
+                                    close_session = true; break;
                                 }
                             }
-                
+
+                            // Clean
+                            if(reset_http_session_request_info(session) != 0){
+                                close_session = true; break; 
+                            }
+
                         } // done processing parsed request 
 
                     } // done reading client data
 
                     // Connection type is CLOSE 
-                    if(session->connection_type == CLOSE){
+                    if(close_session || session->connection_type == CLOSE){
+                        if(cfg_infos->verbose && session->connection_type == CLOSE) print_debug("Connection type set to close\n");
                         close_http_session(session); continue;
                     }
 
                     evt->expect = EVT_READ; 
                     if(evt_register(session->client_fd, evt) != 0){
-                        print_error("Server error: couldn't add client event to the event queue\n");
+                        if(cfg_infos->verbose) print_error("Couldn't add client event to the event queue\n");
                         close_http_session(session); continue;
                     }
 
+                    // Restart timeout timer
                     if(start_session_timer(session) != 0){
                         print_error("Server error: couldn't start client timeout timer\n");
                         close_http_session(session);
@@ -213,167 +232,43 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
 
                 // Sendable data 
                 if(evt->type == SOCKET_EVT && evt->expect & EVT_WRITE){
-                    print_debug("Write queueing not yet implemented\n");
+                    
+                    if(send_http_resp_queue(session->client_fd, session->resp_queue) != 0){
+                        close_http_session(session); continue;
+                    }
+
+                    if(!http_resp_queue_is_empty(session->resp_queue)){
+                        evt->expect = EVT_WRITE; 
+                        if(evt_register(session->client_fd, evt) != 0){
+                            print_error("Server error: couldn't add client event to the event queue\n");
+                            close_http_session(session); continue;
+                        }
+                    }
+                }
+
+
+                // Connection closed by client 
+                if(evt->expect & EVT_CLOSE){
+                    if(cfg_infos->verbose) print_info("Sever : connection closed by peer (fd : %d)\n", session->client_fd);
+                    close_http_session(session);
+                    continue;
+                }
+
+
+                // Timeout 
+                if(evt->type == TIMER_EVT && evt->expect & EVT_TIMER){
+                    if(cfg_infos->verbose) print_debug("Request timeout\n");
+                    close_http_session(session);
+                    continue;
                 }
 
             } // end if server else client event  
         }
         
 
-    }
+    } // Server event loop end
 
 
     close_http_session(server_session);
     close_evt_queue();
-
-
-    /*
-    while(1){  
-
-        client_sin_size = sizeof(client_addr);
-        client_fd = accept(sock_fd, (struct sockaddr *)&client_addr, &client_sin_size);
-        if(client_fd == -1){
-            perror("accept");
-            continue;
-        }
-        
-        char *str_client_addr = sockaddr_in_addr_to_str(&client_addr);
-        if (!cfg_infos->quiet) print_info("Server : got connection from %s\n", str_client_addr);
-        free(str_client_addr); 
-            
-
-        pid_t pid = fork();
-
-        if(pid == -1){
-            perror("server : fork");
-            close(client_fd);
-            continue;
-        }
-
-        if(pid == 0){    // Child process
-            int exit_status = 0;
-
-            close(sock_fd);
-            cfg_infos->client_fd = client_fd;
-            
-            struct timeval timeout = {TIMEOUT_SECONDS, TIMEOUT_MILLISECONDS};
-            if(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1){
-                perror("server : setting client socket option");
-                close(client_fd);
-                exit(1);
-            }
-
-            ring_buffer_t *raw_request_buf = init_ring_buffer(2 * MAX_REQUEST_LEN);
-
-            while(1){   // Client main loop 
-
-                //  ----- Receive and parse data --------------------------------------------
-                bool parsing_complete = false;
-                bool peer_closed = false;
-
-                request_t client_req;
-                memset(&client_req, 0, sizeof(client_req));
-                client_req.header_count = 0;
-                client_req.body_len = 0;
-
-                http_status_e parse_res = HTTP_OK;
-                parsing_request_state_e parse_state = REQ_PARSING_METHOD;
-                size_t total_bytes_parsed = 0;
-                size_t pos = 0;
-                ssize_t bytes_received = 0;
-
-                char raw_request[MAX_REQUEST_LEN];
-                memset(raw_request, 0, sizeof(raw_request));
-
-                while(!parsing_complete){   // Parsing loop 
-
-                    // trying to parse remaining data
-                    parse_res = parse_raw_request(cfg_infos, raw_request_buf, &client_req, 
-                        bytes_received, &total_bytes_parsed, &pos,
-                        &parsing_complete, &parse_state);
-
-                    if(parse_res != HTTP_OK || parsing_complete) break;
-
-                    // loading new data 
-                    bytes_received = recv(client_fd, raw_request, MAX_REQUEST_LEN, 0);
-
-                    if(bytes_received == 0){    // Connection closed 
-                        if (!cfg_infos->quiet){
-                            print_info("Server : peer closed its half side of the connection\n");
-                        } 
-                        if (!parsing_complete && total_bytes_parsed == 0) {
-                            parse_res = HTTP_BAD_REQUEST;  
-                        }
-                        exit_status = 0;
-                        peer_closed = true;
-                        break;
-                    }
-                    if(bytes_received == -1){   // Error during reception 
-                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                            parse_res = HTTP_REQUEST_TIMEOUT;
-                            exit_status = 0;
-                        }
-                        else {
-                            perror("server :  recv");
-                            exit_status = 1;
-                        } 
-                        break;
-                    }
-
-                    // Copy raw request to buffer 
-                    if (write_string_in_r_buffer(raw_request_buf, raw_request, bytes_received) != 0){
-                        exit_status = 1;
-                        break;
-                    }
-                }
-
-                if(peer_closed){
-                    if(!cfg_infos->quiet) print_info("Client communication interuption during data reception\n");
-                    break;
-                }   
-
-                if(exit_status == 1){
-                    print_debug("Error during data reception\n");
-                    break;
-                }
-            
-                // Displaying request
-                if(!cfg_infos->quiet){
-                    print_info("Parsed request (peer_closed=%d, parsing_complete=%d, parse_res=%d) : \n",
-                        peer_closed, parsing_complete, parse_res);
-                    print_request(&client_req);
-                }
-                
-                // Reset ring buffer
-                memset(raw_request_buf->buf, 0, raw_request_buf->buf_size);
-                raw_request_buf->read_pos = 0;
-                raw_request_buf->write_pos = 0;
-
-                //  ----- Process request --------------------------------------------
-                
-                if (route_request(cfg_infos, &client_req, parse_res) != 0){
-                    print_error("Server error while routing request\n");
-                    exit_status = 1;
-                    break;
-                };
-
-                // Exits if connection is close
-                if(strcasecmp(cfg_infos->connection_type, "close") == 0){
-                    break;
-                }
-
-            }   // End of client keep-alive loop 
-            
-            if(!cfg_infos->quiet) print_info("Closing connection\n");
-            free_ring_buffer(raw_request_buf);
-            close(client_fd);
-            exit(exit_status);
-
-        }   // End of child process 
-
-        // Server parent process
-        close(client_fd);
-
-
-    }   // Server main loop end */
 }

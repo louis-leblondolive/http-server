@@ -10,10 +10,11 @@
 
 // warning : no event_free() because void* field may contain elaborate stuff
 
-#define EVT_READ 0b0001
-#define EVT_WRITE 0b0010
-#define EVT_TIMER 0b0100
-#define EVT_CLOSE 0b1000
+#define EVT_READ    0b00001
+#define EVT_WRITE   0b00010
+#define EVT_TIMER   0b00100
+#define EVT_CLOSE   0b01000
+#define EVT_ERROR   0b10000
 
 
 typedef enum event_type {

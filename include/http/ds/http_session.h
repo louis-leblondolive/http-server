@@ -10,6 +10,8 @@
 #include "http_response.h"
 #include "ring_buffer.h"
 #include "parser.h"
+#include "responder.h"
+
 
 typedef enum connection_type {
     KEEP_ALIVE,
@@ -50,7 +52,7 @@ typedef struct http_session_s {
 http_session_t *open_http_session(int client_fd);
 void close_http_session(http_session_t *session);
 void set_http_session_connection_type(http_session_t *session, connection_type_e connection_type);
-
+int reset_http_session_request_info(http_session_t *session);
 
 // ----- SESSION TIMEOUT MANAGEMENT -------------------------------
 #ifdef __linux__
@@ -63,6 +65,6 @@ int init_session_timer(http_session_t *session);
 // restarts the timer if it is already running 
 int start_session_timer(http_session_t *session);
 
-
+void close_session_timer(http_session_t *session);
 
 #endif

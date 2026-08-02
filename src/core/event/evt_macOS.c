@@ -100,7 +100,11 @@ int evt_queue_wait(event_t **event_list, int n_events){
         event_list[n_ready]->expect = 0;
 
         // Error or closed connection 
-        if(k_ev_list[i].flags & EV_ERROR || k_ev_list[i].flags & EV_EOF){
+        if(k_ev_list[i].flags & EV_ERROR){
+            event_list[i]->expect |= EVT_ERROR;
+        }
+
+        if(k_ev_list[i].flags & EV_EOF){
             event_list[i]->expect |= EVT_CLOSE;
         }
 

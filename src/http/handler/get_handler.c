@@ -42,7 +42,10 @@ int handle_get(config_infos_t *cfg_infos, http_session_t *session, http_response
     else cache_res = add_header(serv_resp, "Connection", "keep-alive");
 
     if(cache_res != HTTP_OK) return handle_error(cfg_infos, session, serv_resp, cache_res);
-
+    
+    // CRLF
+    cache_res = init_response_crlf(serv_resp);
+    if(cache_res != HTTP_OK) return handle_error(cfg_infos, session, serv_resp, cache_res);
 
     return HTTP_OK;
 }
