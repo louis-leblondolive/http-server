@@ -3,11 +3,11 @@
 
 
 // ----- SESSION LIFECYCLE ----------------------------------------
-http_session_t *open_http_session(int client_fd){
+http_session_t *open_http_session(config_infos_t *cfg_infos, int client_fd){
 
     if(client_fd < 0) return NULL;
     
-    print_info("Opening session (sock fd %d)\n", client_fd);
+    if(cfg_infos->verbose) print_info("Opening session (sock fd %d)\n", client_fd);
 
     http_session_t *session = (http_session_t*)malloc(sizeof(http_session_t));
     if(!session) return NULL;
@@ -56,9 +56,10 @@ http_session_t *open_http_session(int client_fd){
 }
 
 
-void close_http_session(http_session_t *session){
+void close_http_session(config_infos_t *cfg_infos, http_session_t *session){
 
-    print_info("Closing session (sock fd %d)\n", session->client_fd);
+    if(cfg_infos->verbose)
+        print_info("Closing session (sock fd %d)\n", session->client_fd);
 
     if(!session) return;
 

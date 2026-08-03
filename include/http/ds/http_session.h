@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+#include "config.h"
 #include "evt_queue.h"
 #include "http_request.h"
 #include "http_response.h"
@@ -49,8 +50,8 @@ typedef struct http_session_s {
 
 
 // ----- SESSION LIFECYCLE ----------------------------------------
-http_session_t *open_http_session(int client_fd);
-void close_http_session(http_session_t *session);
+http_session_t *open_http_session(config_infos_t *cfg_infos, int client_fd);
+void close_http_session(config_infos_t *cfg_infos, http_session_t *session);
 void set_http_session_connection_type(http_session_t *session, connection_type_e connection_type);
 int reset_http_session_request_info(http_session_t *session);
 

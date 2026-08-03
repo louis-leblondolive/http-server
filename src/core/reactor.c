@@ -11,7 +11,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
         exit(1);
     }
 
-    http_session_t *server_session = open_http_session(server_fd);
+    http_session_t *server_session = open_http_session(cfg_infos, server_fd);
     if(!server_session){
         print_error("Server: couldn't open server session");
         exit(1);
@@ -22,7 +22,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
     || evt_register(server_fd, &server_evt, false) != 0){
         print_error("Server error: couldn't initialize server event system\n");
         close_evt_queue();
-        close_http_session(server_session);
+        close_http_session(cfg_infos, server_session);
         exit(1);
     }
 
@@ -61,7 +61,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                         continue;
                     }
                     
-                    http_session_t *client_session = open_http_session(client_fd);
+                    http_session_t *client_session = open_http_session(cfg_infos, client_fd);
                     if(!client_session){
                         print_error("Server error: couldn't open client session\n");
                         close(client_fd);
@@ -77,14 +77,14 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     || evt_register(client_fd, &client_session->socket_event, false) != 0){
 
                         print_error("Server error: Couldn't add client event to the event queue\n");
-                        close_http_session(client_session);
+                        close_http_session(cfg_infos, client_session);
                         continue;
                     }
 
                     // Restart timeout timer
                     if(start_session_timer(client_session) != 0){
                         if(!cfg_infos->quiet) print_error("Server error: couldn't start client timeout timer\n");
-                        close_http_session(client_session);
+                        close_http_session(cfg_infos, client_session);
                     }
                 }
 
@@ -101,7 +101,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                 // Event system failure 
                 if(evt->expect & EVT_ERROR){
                     if(cfg_infos->verbose) print_error("Error during event filtering\n");
-                    close_http_session(session);
+                    close_http_session(cfg_infos, session);
                     continue;
                 }
 
@@ -118,12 +118,12 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     }
                     if(bytes_received == -1){
                         perror("server: recv");
-                        close_http_session(session); continue;
+                        close_http_session(cfg_infos, session); continue;
                     }
 
                     if(write_string_in_r_buffer(session->request_raw_buffer, recv_buf, bytes_received) != 0){
                         if(cfg_infos->verbose) print_error("Couldn't write client data to ring buffer\n");
-                        close_http_session(session); continue;
+                        close_http_session(cfg_infos, session); continue;
                     }
 
 
@@ -215,19 +215,19 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     // Connection type is CLOSE 
                     if(close_session || session->connection_type == CLOSE){
                         if(cfg_infos->verbose && session->connection_type == CLOSE) print_debug("Connection type set to close\n");
-                        close_http_session(session); continue;
+                        close_http_session(cfg_infos, session); continue;
                     }
 
                     evt->expect = EVT_READ; 
                     if(evt_register(session->client_fd, evt, false) != 0){
                         if(cfg_infos->verbose) print_error("Couldn't add client event to the event queue\n");
-                        close_http_session(session); continue;
+                        close_http_session(cfg_infos, session); continue;
                     }
 
                     // Restart timeout timer
                     if(start_session_timer(session) != 0){
                         print_error("Server error: couldn't start client timeout timer\n");
-                        close_http_session(session);
+                        close_http_session(cfg_infos, session);
                     }
                 }
 
@@ -235,14 +235,14 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                 if(evt->type == SOCKET_EVT && evt->expect & EVT_WRITE){
                     
                     if(send_http_resp_queue(session->client_fd, session->resp_queue) != 0){
-                        close_http_session(session); continue;
+                        close_http_session(cfg_infos, session); continue;
                     }
 
                     if(!http_resp_queue_is_empty(session->resp_queue)){
                         evt->expect = EVT_WRITE; 
                         if(evt_register(session->client_fd, evt, false) != 0){
                             print_error("Server error: couldn't add client event to the event queue\n");
-                            close_http_session(session); continue;
+                            close_http_session(cfg_infos, session); continue;
                         }
                     }
                 }
@@ -251,7 +251,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                 // Connection closed by client 
                 if(evt->expect & EVT_CLOSE){
                     if(cfg_infos->verbose) print_info("Sever : connection closed by peer (fd : %d)\n", session->client_fd);
-                    close_http_session(session);
+                    close_http_session(cfg_infos, session);
                     continue;
                 }
 
@@ -259,7 +259,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                 // Timeout 
                 if(evt->type == TIMER_EVT && evt->expect & EVT_TIMER){
                     if(cfg_infos->verbose) print_debug("Request timeout\n");
-                    close_http_session(session);
+                    close_http_session(cfg_infos, session);
                     continue;
                 }
 
@@ -270,6 +270,6 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
     } // Server event loop end
 
 
-    close_http_session(server_session);
+    close_http_session(cfg_infos, server_session);
     close_evt_queue();
 }
