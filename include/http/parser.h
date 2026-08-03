@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "compat.h"
 #include "http_request.h"
+#include "http_cgi_output.h"
 #include "ring_buffer.h"
 #include "config.h"
 #include "printer.h"
@@ -31,16 +31,16 @@ typedef enum parsing_request_state {
 } parsing_request_state_e ; 
 
 
-typedef enum parsing_response_state {
-    RESP_EXPECTING_LF, 
-    RESP_PARSING_NEW_LINE,
-    RESP_PARSING_HEADER_KEY,
-    RESP_PARSING_HEADER_KEY_SEPARATOR,
-    RESP_PARSING_HEADER_VALUE, 
-    RESP_EXPECTING_FINAL_LF, 
-    RESP_PARSING_BODY, 
-    RESP_END_PARSING
-} parsing_response_state_e ; 
+typedef enum parsing_cgi_output_state {
+    CGI_OUT_EXPECTING_LF, 
+    CGI_OUT_PARSING_NEW_LINE,
+    CGI_OUT_PARSING_HEADER_KEY,
+    CGI_OUT_PARSING_HEADER_KEY_SEPARATOR,
+    CGI_OUT_PARSING_HEADER_VALUE, 
+    CGI_OUT_EXPECTING_FINAL_LF, 
+    CGI_OUT_PARSING_BODY, 
+    CGI_OUT_END_PARSING
+} parsing_cgi_output_state_e ; 
 
 
 /**
@@ -83,7 +83,6 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
  * @param[in]      cfg_infos              Configuration infos (verbosity).
  * @param[in]      raw_response_buf       Ring buffer containing raw response.
  * @param[in, out] parsed_response_head   Pointer to the request that is currently being parsed.
- * @param[in, out] parsed_resp_body       Pointer to a buffer receiving response body.  
  * @param[in]      bytes_received         Number of processable bytes in the buffer.
  * @param[in, out] total_bytes_parsed     Total amount of bytes processed for this request.
  * @param[in, out] pos                    Current writing position in the active parsing response field.
@@ -95,11 +94,9 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
  * @note **Crucial**: A return of HTTP_OK does NOT mean the request is ready. 
  * Always check `*parsing_complete` before responding.
  */
-/*
-http_status_e parse_raw_cgi_response(config_infos_t *cfg_infos, ring_buffer_t *raw_response_buf, 
-                            response_head_t *parsed_response_head, char *parsed_resp_body, 
+http_status_e parse_raw_cgi_output(config_infos_t *cfg_infos, ring_buffer_t *raw_response_buf, 
+                            http_cgi_output_t *parsed_cgi_output,
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
-                            bool *parsing_complete, parsing_response_state_e *parse_state, bool *has_body_length);
-*/
+                            bool *parsing_complete, parsing_cgi_output_state_e *parse_state, bool *has_body_length);
 
 #endif 

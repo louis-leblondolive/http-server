@@ -2,74 +2,83 @@
 
 
 
-extern char **environ;
+#define MAX_ENVP_VAR_SIZE (MAX_HEADER_KEY_SIZE + 1 + MAX_HEADER_VALUE_SIZE + 1)
 
-int handle_cgi(config_infos_t *cfg_infos, request_t *client_req){ return -1; }
-
-/*
-int handle_cgi(config_infos_t *cfg_infos, request_t *client_req){
+int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response_t *serv_resp){
 
     if(!cfg_infos->quiet) print_debug("Handler - CGI - Starting handler\n");
 
     // Asserts method is GET or POST
-    if(strcmp(client_req->method, "GET") != 0 && strcmp(client_req->method, "POST") != 0){
-        return handle_error(cfg_infos, HTTP_METHOD_NOT_ALLOWED);
+    if(strcmp(session->client_req->method, "GET") != 0 && strcmp(session->client_req->method, "POST") != 0){
+        return handle_error(cfg_infos, session, serv_resp, HTTP_METHOD_NOT_ALLOWED);
     }
 
     // ----- Setup environment variables -------------------------------------------------------
+    if(cfg_infos->verbose) print_debug("Handler - CGI - Start setting environment up\n");
 
-    // Clearing environment variables, 
-    *environ = NULL;
+    // --- Init environment table 
 
-    if(!cfg_infos->quiet) print_debug("Handler - CGI - Start setting environment up\n");
+    /*
+    Note : in addition to client request headers, the following environment variables will be passed 
+        to the script:
+    
+        REQUEST_METHOD, SERVER_PROTOCOL, PATH, SCRIPT_FILENAME and QUERY_STRING.
+    */
+    size_t env_var_count = 5 + (size_t)session->client_req->header_count + 1;   // counting NULL guard    
+    
+    char envp_buf[5 + MAX_HEADER_NB + 1][MAX_ENVP_VAR_SIZE];
 
     // Default variables
     if(!cfg_infos->quiet) print_debug("Handler - CGI - Writing default variables\n");
-    setenv("REQUEST_METHOD", client_req->method, 1);              
-    setenv("SERVER_PROTOCOL", "HTTP/1.1", 1);
-    setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin", 1);
 
-    printf("content len %zu\n", client_req->body_len);
-
-    char len_str[32];
-    snprintf(len_str, sizeof(len_str), "%zu", client_req->body_len);
-    setenv("CONTENT_LENGTH", len_str, 1);
+    snprintf(envp_buf[0], MAX_ENVP_VAR_SIZE, "REQUEST_METHOD=%s", session->client_req->method);
+    snprintf(envp_buf[1], MAX_ENVP_VAR_SIZE, "SERVER_PROTOCOL=HTTP/1.1");
+    snprintf(envp_buf[2], MAX_ENVP_VAR_SIZE, "PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin");
 
     // Path and query
     if(!cfg_infos->quiet) print_debug("Handler - CGI - Resolving execution path and query\n");
+
     char exec_path[MAX_PATH_LEN];
     char query[MAX_PATH_LEN];
 
-    if(strcmp(client_req->method, "GET") == 0){
-        
-        if (sscanf(client_req->path, "%[^?]?%s", exec_path, query) < 1) {
-            strncpy(exec_path, client_req->path, MAX_PATH_LEN);
+    if(strcmp(session->client_req->method, "GET") == 0){
+
+        if (sscanf(session->client_req->path, "%[^?]?%s", exec_path, query) <= 1) {
+            snprintf(exec_path, MAX_PATH_LEN, "%s", session->client_req->path);
+            query[0] = '\0';
         }
 
-        setenv("SCRIPT_FILENAME", exec_path, 1);
-        setenv("QUERY_STRING", query, 1);
+        snprintf(envp_buf[3], MAX_ENVP_VAR_SIZE, "SCRIPT_FILENAME=%s", exec_path);
+        snprintf(envp_buf[4], MAX_ENVP_VAR_SIZE, "QUERY_STRING=%s", query);
 
     } else {
-        strncpy(exec_path, client_req->path, MAX_PATH_LEN);
-        strncpy(query, "", MAX_PATH_LEN);
-        setenv("SCRIPT_FILENAME", exec_path, 1);
-        setenv("QUERY_STRING", "", 1);
+        snprintf(exec_path, MAX_PATH_LEN, "%s", session->client_req->path);
+        query[0] = '\0';
+
+        snprintf(envp_buf[3], MAX_ENVP_VAR_SIZE, "SCRIPT_FILENAME=%s", session->client_req->path);
+        snprintf(envp_buf[4], MAX_ENVP_VAR_SIZE, "QUERY_STRING=");
     }
 
-    
     // Client headers 
     if(!cfg_infos->quiet) print_debug("Handler - CGI - Converting headers to environment variables\n");
-    for (int i = 0; i < client_req->header_count; i++){
 
-        header_t hd = client_req->headers[i];
+    for (size_t i = 0; i < session->client_req->header_count; i++){
+
+        header_t hd = session->client_req->headers[i];
         
+        size_t env_index = i + 5;
+
         // Name exception for content-type 
         if(strcasecmp(hd.key, "Content-Type") == 0){
-            setenv("CONTENT_TYPE", hd.value, 1);
+            snprintf(envp_buf[env_index], MAX_ENVP_VAR_SIZE, "CONTENT_TYPE=%s", hd.value);
+        }
+
+        else if(strcasecmp(hd.key, "Content-Length") == 0){
+            snprintf(envp_buf[env_index], MAX_ENVP_VAR_SIZE, "CONTENT_LENGTH=%zu", session->client_req->body_len);
         }
 
         // Other headers
-        else if(strcasecmp(hd.key, "Content-Length") != 0){
+        else {
 
             char maj_hd_key[MAX_HEADER_KEY_SIZE];
             for (size_t j = 0; j < strlen(hd.key) && j < MAX_HEADER_KEY_SIZE - 1; j++){
@@ -81,19 +90,34 @@ int handle_cgi(config_infos_t *cfg_infos, request_t *client_req){
             char env_hd_key[sizeof(maj_hd_key) + 5];
             snprintf(env_hd_key, sizeof(maj_hd_key) + 5, "HTTP_%s", maj_hd_key);
 
-            setenv(env_hd_key, hd.value, 1);
+            snprintf(envp_buf[env_index], MAX_ENVP_VAR_SIZE, "%s=%s", env_hd_key, hd.value);
         }
     }
 
+
+    char *envp[5 + MAX_HEADER_NB + 1];
+    for (size_t i = 0; i < env_var_count - 1; i++){
+        envp[i] = envp_buf[i];
+    }
+    envp[env_var_count - 1] = NULL;
+   
     if(!cfg_infos->quiet) print_debug("Handler - CGI - Done setting environment up\n");
 
     // ----- Pipe and fork -------------------------------------------------------
     int pipe_in[2], pipe_out[2];
 
-    if( pipe(pipe_in) < 0 || pipe(pipe_out) < 0) return handle_error(cfg_infos, HTTP_INTERNAL_ERROR);
+    if(pipe(pipe_in) < 0) return handle_error(cfg_infos, session, serv_resp, HTTP_INTERNAL_ERROR);
+    if(pipe(pipe_out) < 0){
+        close(pipe_in[0]); close(pipe_in[1]);
+        return handle_error(cfg_infos, session, serv_resp, HTTP_INTERNAL_ERROR);
+    }
 
     pid_t pid = fork();
-    if(pid < 0) return handle_error(cfg_infos, HTTP_INTERNAL_ERROR);
+    if(pid < 0){
+        close(pipe_in[0]); close(pipe_in[1]);
+        close(pipe_out[0]); close(pipe_out[1]);
+        return handle_error(cfg_infos, session, serv_resp, HTTP_INTERNAL_ERROR);
+    }
 
     if(pid == 0){   // Child process    
 
@@ -103,9 +127,13 @@ int handle_cgi(config_infos_t *cfg_infos, request_t *client_req){
         close(pipe_in[0]); close(pipe_in[1]);
         close(pipe_out[0]); close(pipe_out[1]);
         
-        execl(exec_path, exec_path, (char *)NULL);
+        char *argv[2];
+        argv[0] = exec_path;
+        argv[1] = NULL;
 
-        perror("CGI execl failed");
+        execve(exec_path, argv, envp);
+
+        perror("CGI execve failed");
         fprintf(stderr, "path: %s\n", exec_path);
         fprintf(stderr, "query: %s\n", query);
         _exit(EXIT_FAILURE);
@@ -115,14 +143,16 @@ int handle_cgi(config_infos_t *cfg_infos, request_t *client_req){
     close(pipe_in[0]);
     close(pipe_out[1]);
 
-    if(client_req->body_len > 0 && strcmp(client_req->method, "POST") == 0){
-        write(pipe_in[1], client_req->body, client_req->body_len);
+    if(session->client_req->body_len > 0 && strcmp(session->client_req->method, "POST") == 0){
+        write(pipe_in[1], session->client_req->body, session->client_req->body_len);
     }
     close(pipe_in[1]);
 
-    // ----- Read response -------------------------------------------------------
+    return -1;
 
-    bool parsing_complete = false;
+    // ----- Read response -------------------------------------------------------
+    /*
+    bool parsing_complete = false;  
 
     http_status_e parse_res = HTTP_OK;
     parsing_response_state_e parse_state = RESP_PARSING_NEW_LINE;
@@ -239,5 +269,5 @@ int handle_cgi(config_infos_t *cfg_infos, request_t *client_req){
     send_raw_content(cfg_infos, serv_resp_body, serv_resp_hd.content_len);
 
     return HTTP_OK;
-}
     */
+}

@@ -70,7 +70,7 @@ http_status_e check_request(config_infos_t *cfg_infos, request_t *client_req){
     bool content_length_exists = false; 
     int host_counter = 0;
 
-    for (int i = 0; i < client_req->header_count; i++){
+    for (size_t i = 0; i < client_req->header_count; i++){
 
         header_t hd = client_req->headers[i];
         

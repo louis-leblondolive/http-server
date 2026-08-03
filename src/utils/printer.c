@@ -42,7 +42,7 @@ void print_request(request_t *r){
     if(!r) return;
 
     printf("%s %s %s\n", r->method, r->path, r->version);
-    for (int i = 0; i < r->header_count; i++){
+    for (size_t i = 0; i < r->header_count; i++){
         printf("%s: %s\n", r->headers[i].key, r->headers[i].value);
     }
     printf("\n");

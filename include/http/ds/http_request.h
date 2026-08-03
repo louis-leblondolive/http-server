@@ -4,12 +4,7 @@
 #include <stdlib.h>
 
 #include "config.h"
-
-
-typedef struct header_s {
-    char key[MAX_HEADER_KEY_SIZE];
-    char value[MAX_HEADER_VALUE_SIZE];
-} header_t ;
+#include "http_common.h"
 
 
 typedef struct request_s {
@@ -18,7 +13,7 @@ typedef struct request_s {
     char version[MAX_VERSION_LEN];
 
     header_t headers[MAX_HEADER_NB];
-    int header_count;
+    size_t header_count;
 
     char body[MAX_BODY_LEN];
     size_t body_len;

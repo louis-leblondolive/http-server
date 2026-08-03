@@ -33,7 +33,7 @@ int route_request(config_infos_t *cfg_infos, http_session_t *session, http_respo
 
     if(strncmp(session->client_req->path, cgi_path, strlen(cgi_path)) == 0){     // Using CGI
 
-        return handle_cgi(cfg_infos, session->client_req);
+        return handle_cgi(cfg_infos, session, serv_resp);
     }
     else if(strcmp(session->client_req->method, "GET") == 0){            // GET
 

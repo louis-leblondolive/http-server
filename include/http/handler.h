@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <signal.h>
 
-#include "compat.h"
 #include "http_codes.h"
 #include "http_request.h"
 #include "http_response.h"
@@ -50,17 +49,18 @@ int handle_get(config_infos_t *cfg_infos, http_session_t *session, http_response
 int handle_options(config_infos_t *cfg_infos, http_session_t *session, http_response_t *serv_resp);
 
 /**
- * @brief Handles a CGI request, using fork() and execl with environment variables to execute 
- * external scripts. 
+ * @brief Handles a CGI request, using fork() and execve to execute external scripts. 
  * @note GET and POST CGI requests are both handled by this function. 
  * 
  * @param cfg_infos     Configuration informations (Destination socket must be set).
- * @param client_req    Pointer to the client request.
+ * @param session      A pointer to the client http session. 
+ * @param serv_resp    A pointer to the server http response to fill. 
+ * 
  * @return 0 on successful handle and send, -1 otherwise.
  * 
  * @warning Script response size is bounded by MAX_BODY_LEN, trying to go above will trigger an 
  * error. 
  */
-int handle_cgi(config_infos_t *cfg_infos, request_t *client_req);
+int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response_t *serv_resp);
 
 #endif

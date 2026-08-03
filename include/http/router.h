@@ -2,8 +2,6 @@
 #define ROUTER
 
 
-
-#include "compat.h"
 #include "http_session.h"
 #include "http_response.h"
 #include "printer.h"
