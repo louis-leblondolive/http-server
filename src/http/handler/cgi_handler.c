@@ -216,7 +216,7 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
     }
 
     // Error while parsing headers 
-    if (parse_res != HTTP_OK) {
+    if (cgi_output.status != HTTP_OK) {
         if(cfg_infos->verbose) print_debug("Handler - Error while parsing CGI response\n");
         return handle_error(cfg_infos, session, serv_resp, parse_res);
     }
@@ -227,7 +227,24 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
     }
 
     // ----- Build response -------------------------------------------------------
-    
+    init_http_response(serv_resp);
+
+    http_status_e cache_res; 
+
+    // Build response head
+    cache_res = init_response_status(serv_resp, cgi_output.status);
+    if(cache_res != HTTP_OK) return handle_error(cfg_infos, session, serv_resp, cache_res);
+
+    cache_res = init_response_default_headers(serv_resp);
+    if(cache_res != HTTP_OK) return handle_error(cfg_infos, session, serv_resp, cache_res);
+
+    // Build response content 
+    cache_res = init_response_content(serv_resp, RAW_HTTP_RESP, cgi_output.body, cgi_output.body_len, cgi_output.body_len);
+    if(cache_res != HTTP_OK) return handle_error(cfg_infos, session, serv_resp, cache_res);
+
+    // CRLF
+    cache_res = init_response_crlf(serv_resp);
+    if(cache_res != HTTP_OK) return handle_error(cfg_infos, session, serv_resp, cache_res);
 
     return 0;
 }
