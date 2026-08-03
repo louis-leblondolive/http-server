@@ -1,5 +1,5 @@
 #include "handler.h"
-
+#include "http_cgi_output.h"
 
 
 #define MAX_ENVP_VAR_SIZE (MAX_HEADER_KEY_SIZE + 1 + MAX_HEADER_VALUE_SIZE + 1)
@@ -29,14 +29,14 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
     char envp_buf[5 + MAX_HEADER_NB + 1][MAX_ENVP_VAR_SIZE];
 
     // Default variables
-    if(!cfg_infos->quiet) print_debug("Handler - CGI - Writing default variables\n");
+    if(cfg_infos->verbose) print_debug("Handler - CGI - Writing default variables\n");
 
     snprintf(envp_buf[0], MAX_ENVP_VAR_SIZE, "REQUEST_METHOD=%s", session->client_req->method);
     snprintf(envp_buf[1], MAX_ENVP_VAR_SIZE, "SERVER_PROTOCOL=HTTP/1.1");
     snprintf(envp_buf[2], MAX_ENVP_VAR_SIZE, "PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin");
 
     // Path and query
-    if(!cfg_infos->quiet) print_debug("Handler - CGI - Resolving execution path and query\n");
+    if(cfg_infos->verbose) print_debug("Handler - CGI - Resolving execution path and query\n");
 
     char exec_path[MAX_PATH_LEN];
     char query[MAX_PATH_LEN];
@@ -60,7 +60,7 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
     }
 
     // Client headers 
-    if(!cfg_infos->quiet) print_debug("Handler - CGI - Converting headers to environment variables\n");
+    if(cfg_infos->verbose) print_debug("Handler - CGI - Converting headers to environment variables\n");
 
     for (size_t i = 0; i < session->client_req->header_count; i++){
 
@@ -101,7 +101,7 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
     }
     envp[env_var_count - 1] = NULL;
    
-    if(!cfg_infos->quiet) print_debug("Handler - CGI - Done setting environment up\n");
+    if(cfg_infos->verbose) print_debug("Handler - CGI - Done setting environment up\n");
 
     // ----- Pipe and fork -------------------------------------------------------
     int pipe_in[2], pipe_out[2];
@@ -148,28 +148,25 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
     }
     close(pipe_in[1]);
 
-    return -1;
 
-    // ----- Read response -------------------------------------------------------
-    /*
+    // ----- Read output -------------------------------------------------------
+    
     bool parsing_complete = false;  
 
     http_status_e parse_res = HTTP_OK;
-    parsing_response_state_e parse_state = RESP_PARSING_NEW_LINE;
+    parsing_cgi_output_state_e parse_state = CGI_OUT_PARSING_NEW_LINE;
     size_t total_bytes_parsed = 0;
     size_t pos = 0;
     bool has_body_len = false; 
+    bool has_status = false;
 
     ring_buffer_t *raw_response_buf = init_ring_buffer(MAX_REQUEST_LEN);
     char tmp_read_buf[4096]; 
 
-    response_head_t serv_resp_hd;
-    memset(&serv_resp_hd, 0, sizeof(serv_resp_hd));
-    serv_resp_hd.content_len = 0;
-    serv_resp_hd.header_count = 0;
-
-    char serv_resp_body[MAX_BODY_LEN];
-
+    http_cgi_output_t cgi_output;
+    cgi_output.header_count = 0;
+    cgi_output.body_len = 0;
+    
 
     while (!parsing_complete) {
 
@@ -183,7 +180,7 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
 
         if (bytes_read == 0) {
             // <=> EOF
-            if (parse_state == RESP_PARSING_BODY && !has_body_len) {
+            if (parse_state == CGI_OUT_PARSING_BODY && !has_body_len) {
                 // Done if unknown body length
                 parsing_complete = true;
                 parse_res = HTTP_OK;
@@ -201,9 +198,9 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
         }
 
         // Parsing through all buffer 
-        parse_res = parse_raw_cgi_response(cfg_infos, raw_response_buf, &serv_resp_hd, 
-                        serv_resp_body, bytes_read, &total_bytes_parsed, &pos,
-                        &parsing_complete, &parse_state, &has_body_len);
+        parse_res = parse_raw_cgi_output(cfg_infos, raw_response_buf, &cgi_output, 
+                        bytes_read, &total_bytes_parsed, &pos,
+                        &parsing_complete, &parse_state, &has_body_len, &has_status);
 
         if (parse_res != HTTP_OK) break;
     }
@@ -212,62 +209,25 @@ int handle_cgi(config_infos_t *cfg_infos, http_session_t *session, http_response
     free_ring_buffer(raw_response_buf);
 
     if(!has_body_len){
-        serv_resp_hd.content_len = pos;
+        cgi_output.body_len = pos;
+    }
+    if(!has_status){
+        cgi_output.status = parse_res;
     }
 
     // Error while parsing headers 
     if (parse_res != HTTP_OK) {
         if(cfg_infos->verbose) print_debug("Handler - Error while parsing CGI response\n");
-        return handle_error(cfg_infos, parse_res);
+        return handle_error(cfg_infos, session, serv_resp, parse_res);
     }
 
     if(cfg_infos->verbose){
-        print_debug("Handler - Parsed CGI response headers :\n");
-        print_response(&serv_resp_hd);
+        print_debug("Handler - Parsed CGI output :\n");
+        print_cgi_output(&cgi_output);
     }
 
-    // ----- Building and sending response -------------------------------------------------------
+    // ----- Build response -------------------------------------------------------
     
-    http_status_e cache_res;
 
-    // ----- Headers ------
-        // status 
-    int code = atoi(serv_resp_hd.code);
-    cache_res = get_status_from_code(code);
-    if(cache_res != HTTP_OK) return handle_error(cfg_infos, cache_res);
-
-    if(strlen(HTTP_VERSION) > MAX_VERSION_LEN) cache_res = HTTP_INTERNAL_ERROR;
-    strcpy(serv_resp_hd.version, HTTP_VERSION);
-
-        // default 
-    cache_res = init_response_default_headers(&serv_resp_hd);
-    if(cache_res != HTTP_OK) return handle_error(cfg_infos, cache_res);
-
-        // connection type
-    if(strcasecmp(client_req->connection_type, "keep-alive") == 0){
-        strlcpy(cfg_infos->connection_type, "keep-alive", MAX_HEADER_VALUE_SIZE);
-    } else {
-        strlcpy(cfg_infos->connection_type, "close", MAX_HEADER_VALUE_SIZE);
-    }
-    cache_res = add_header(&serv_resp_hd, "Connection", cfg_infos->connection_type);
-    if(cache_res != HTTP_OK) return handle_error(cfg_infos, cache_res);
-
-        // content length
-    if(!has_body_len){
-        cache_res = init_response_content_length(&serv_resp_hd);
-        if(cache_res != HTTP_OK) return handle_error(cfg_infos, cache_res);
-    }    
-
-    // send headers
-    if(send_response_head(cfg_infos, &serv_resp_hd) != 0){
-        return handle_error(cfg_infos, HTTP_INTERNAL_ERROR);
-    } 
-
-
-    // ----- Body ------
-    
-    send_raw_content(cfg_infos, serv_resp_body, serv_resp_hd.content_len);
-
-    return HTTP_OK;
-    */
+    return 0;
 }

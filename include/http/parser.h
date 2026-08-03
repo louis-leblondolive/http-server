@@ -97,6 +97,7 @@ http_status_e parse_raw_request(config_infos_t *cfg_infos, ring_buffer_t *raw_re
 http_status_e parse_raw_cgi_output(config_infos_t *cfg_infos, ring_buffer_t *raw_response_buf, 
                             http_cgi_output_t *parsed_cgi_output,
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
-                            bool *parsing_complete, parsing_cgi_output_state_e *parse_state, bool *has_body_length);
+                            bool *parsing_complete, parsing_cgi_output_state_e *parse_state, 
+                            bool *has_body_length, bool *has_status);
 
 #endif 

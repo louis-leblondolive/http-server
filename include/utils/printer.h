@@ -10,8 +10,9 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include <http_request.h>
-#include <http_response.h>
+#include "http_request.h"
+#include "http_response.h"
+#include "http_cgi_output.h"
 
 // Prints an error in red 
 void print_error(char *format, ...);
@@ -25,5 +26,7 @@ void print_debug(char *format, ...);
 void print_request(request_t *r);
 
 void print_response(http_response_t *r);
+
+void print_cgi_output(http_cgi_output_t *cgi_output);
 
 #endif

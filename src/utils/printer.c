@@ -71,3 +71,23 @@ void print_response(http_response_t *r){
     printf("----- End of Body -----\n");
     printf("\n");
 }
+
+
+void print_cgi_output(http_cgi_output_t *cgi_output){
+    if(!cgi_output) return;
+
+    printf("Status: %d\n", cgi_output->status);
+
+    for (size_t i = 0; i < cgi_output->header_count; i++){
+        printf("%s: %s\n", cgi_output->headers[i].key, cgi_output->headers[i].value);
+    }
+    printf("\n");
+    if(cgi_output->body_len <= 2000){
+        printf("----- Body -----\n");
+        if(strcmp(cgi_output->body, "\0") != 0) printf("%s\n", cgi_output->body);
+        printf("----- End of Body -----\n");
+    } else {
+        printf("Long body (length > 2000)\n");
+    }
+    printf("\n");
+}

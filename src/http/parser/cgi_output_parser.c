@@ -5,7 +5,8 @@
 http_status_e parse_raw_cgi_output(config_infos_t *cfg_infos, ring_buffer_t *raw_response_buf, 
                             http_cgi_output_t *parsed_cgi_output,  
                             ssize_t bytes_received, size_t *total_bytes_parsed, size_t *pos, 
-                            bool *parsing_complete, parsing_cgi_output_state_e *parse_state, bool *has_body_length){
+                            bool *parsing_complete, parsing_cgi_output_state_e *parse_state,
+                            bool *has_body_length, bool *has_status){
 
     int local_parse_counter = 0;
     char cur_char;
@@ -129,6 +130,8 @@ http_status_e parse_raw_cgi_output(config_infos_t *cfg_infos, ring_buffer_t *raw
                             int code; 
                             if(sscanf(parsed_cgi_output->headers[header_count].value, "%d", &code) < 1) return HTTP_BAD_GATEWAY;
                             parsed_cgi_output->status = get_status_from_code(code);
+
+                            *has_status = true;
 
                             if(parsed_cgi_output->status == HTTP_INTERNAL_ERROR) return HTTP_BAD_GATEWAY;
 
