@@ -1,13 +1,16 @@
-# C HTTP Server 
+<h1 align="center">skiff</h1>
+<p align="center"><i>A low level HTTP server implemented in C from scratch</i></p>
 
-![CI](https://github.com/louis-leblondolive/http-server/actions/workflows/ci.yml/badge.svg)
+<p align="center">
+  <img src="https://github.com/louis-leblondolive/skiff/actions/workflows/build.yml/badge.svg" alt="Build">
+  <img src="https://github.com/louis-leblondolive/skiff/actions/workflows/test.yml/badge.svg" alt="Test">
+  <img src="https://img.shields.io/github/v/release/louis-leblondolive/skiff" alt="Release">
+</p>
 
-A low-level HTTP/1.1 server built in C from scratch. This project was developed as a deep dive into 
-POSIX network programming, concurrency and robust protocol parsing.
-
->[!IMPORTANT]
->This project includes macOS and Linux support.
->HTTP version is **HTTP/1.1**, other versions such as HTTP/2 or HTTP/3 are not supported. 
+<p align="center">
+  <img src="https://img.shields.io/badge/-Linux-FCC624?logo=linux&logoColor=black" alt="Linux">
+  <img src="https://img.shields.io/badge/-macOS-000000?logo=apple&logoColor=white" alt="macOS">
+</p>
 
 ## Main Features
 - **HTTP/1.1 support** and standard status codes for GET, HEAD, OPTIONS, POST.
@@ -18,6 +21,10 @@ POSIX network programming, concurrency and robust protocol parsing.
 - **CGI support** : Using fork() and environment variables, tested on python scripts.
 - **Security features** : Built-in protection against path traversal and buffer overflow.
 - **Demo website** : Start the server and test it at `http://localhost:3490`.
+
+>[!IMPORTANT]
+>This project includes macOS and Linux support.
+>HTTP version is **HTTP/1.1**, other versions such as HTTP/2 or HTTP/3 are not supported. 
 
 
 ## Build and Run 

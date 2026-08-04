@@ -1,0 +1,36 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Debug (ASan)
+        run: make debug
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+          cache-dependency-path: tester/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r tester/requirements.txt
+
+      - name: Start server
+        run: |
+          export ASAN_OPTIONS=detect_leaks=0:abort_on_error=1
+          ./build/debug/main &
+          sleep 2
+
+      - name: Run tests
+        run: python3 tester/test_runner.py

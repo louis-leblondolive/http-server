@@ -7,16 +7,25 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+          cache-dependency-path: tester/requirements.txt
+
       - name: Build Debug
         run: make debug
+
       - name: Install Python dependencies
         run: |
           python3 -m venv .venv
           .venv/bin/pip install -r tester/requirements.txt
+          
       - name: Start server
         run: |
           export ASAN_OPTIONS="detect_leaks=0"
           ./build/debug/main & sleep 2
+
       - name: Run tests
         run: .venv/bin/python3 tester/test_runner.py
 
@@ -24,6 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+          cache-dependency-path: tester/requirements.txt
       
       - name: Build Debug
         run: make debug
