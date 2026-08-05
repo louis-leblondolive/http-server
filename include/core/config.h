@@ -5,7 +5,7 @@
 
 //  Server parameters
 #define SERVER_NAME "skiff"
-#define SERVER_VERSION "2.0"
+#define SERVER_VERSION "1.1"
 #define PORT "3490"
 #define BACKLOG 10
 #define DEFAULT_PATH "index.html"   // www_root is included automatically 

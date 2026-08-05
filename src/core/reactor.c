@@ -11,6 +11,11 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
         exit(1);
     }
 
+    if(init_signal_handlers() != 0){
+        print_error("Server error: couldn't initialize signal handlers\n");
+        exit(1);
+    }
+
     http_session_t *server_session = open_http_session(cfg_infos, server_fd);
     if(!server_session){
         print_error("Server: couldn't open server session");
@@ -26,11 +31,10 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
         exit(1);
     }
 
-    if (!cfg_infos->quiet) print_info("Server online, listening on port %s\n", PORT);
-
     event_t *events[MAX_EVENTS];
     for (size_t i = 0; i < MAX_EVENTS; i++) events[i] = NULL;
-    
+
+    if (!cfg_infos->quiet) print_info("Server online, listening on port %s\n", PORT);    
 
     // ---------  Server main event loop ----------------------------------------------------------
     while(1){
