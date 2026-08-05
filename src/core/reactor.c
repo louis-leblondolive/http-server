@@ -118,7 +118,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                     
                     if(bytes_received == 0){
                         if (!cfg_infos->quiet) print_info("Server : peer closed its half side of the connection\n");
-                        set_http_session_connection_type(session, CLOSE);
+                        close_http_session(cfg_infos, session); continue;
                     }
                     if(bytes_received == -1){
                         perror("server: recv");
@@ -207,6 +207,11 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
                                 }
                             }
 
+                            // Overriding read loop if connection set to close 
+                            if(session->connection_type == CLOSE){
+                                close_session = true; break;
+                            }
+
                             // Clean
                             if(reset_http_session_request_info(session) != 0){
                                 close_session = true; break; 
@@ -216,7 +221,7 @@ void reactor(config_infos_t *cfg_infos, int server_fd){
 
                     } // done reading client data
 
-                    // Connection type is CLOSE 
+                    // Close client session 
                     if(close_session || session->connection_type == CLOSE){
                         if(cfg_infos->verbose && session->connection_type == CLOSE) print_debug("Connection type set to close\n");
                         close_http_session(cfg_infos, session); continue;
