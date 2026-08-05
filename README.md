@@ -12,14 +12,37 @@
   <img src="https://img.shields.io/badge/-macOS-000000?logo=apple&logoColor=white" alt="macOS">
 </p>
 
+
+## Table of Contents
+- [Main Features](#main-features)
+- [Build and Run](#build-and-run)
+- [Usage](#usage)
+- [Architecture & Internals](#architecture--internals)
+    - [Server General Architecture](#server-general-architecture)
+    - [Abstract Event System](#abstract-event-system)
+    - [Request Parsing](#robust-request-parsing)
+    - [Response Emission Optimization](#response-emission-optimization)
+    - [Security](#security)
+    - [System Reliability](#system-reliability--signal-handling)
+- [Tests](#tests)
+- [Benchmark](#benchmark)
+    - [Current Performances]()
+    - [Architectures Comparison]()
+- [Known Limitations]()
+- [Repository Structure](#repository-structure)
+- [References](#references)
+
+
+
 ## Main Features
-- **HTTP/1.1 support** and standard status codes for GET, HEAD, OPTIONS, POST.
-- **Concurrency model** : Multi-process architecture using fork() with zombie process reaping.
-- **Keep-Alive support** : Efficient connection persistence using a ring buffer.
-- **FSM parser** : Handles chunked requests seamlessly.
+- **HTTP/1.1 support** and 15+ standard status codes for `GET`, `HEAD`, `OPTIONS`, and `POST`.
+- **Concurrency model** : I/O multiplexing single-threaded (for now) architecture based on a `kqueue`/`epoll` abstraction.
+- **Zero-copy send** : Kernel space file transfer via `sendfile()` for response optimization. 
+- **Keep-Alive support** : Connection persistence using a ring buffer for allocation efficiency.
+- **FSM parser** : Handling partial request reception.
 - **Full static serving** : Served with proper MIME types and `If-Modified-Since` cache support.
-- **CGI support** : Using fork() and environment variables, tested on python scripts.
-- **Security features** : Built-in protection against path traversal and buffer overflow.
+- **CGI support** : Environment-based execution following RFC 3875 output constraints.
+- **Security features** : Built-in `realpath` based protection against path traversal and buffer overflow.
 - **Demo website** : Start the server and test it at `http://localhost:3490`.
 
 >[!IMPORTANT]
@@ -73,7 +96,7 @@ You can run the generated binaries from the `build` directory, depending on the 
 > (Colors supported). 
 
 >[!NOTE]
->Because this server uses fork(), the **debug mode** might introduce a slight latency (approx. 40ms) due to ASan overhead. For better performance (<1ms response time), always use the **release mode**.
+>The **debug mode** might introduce a slight latency (approx. 40ms) due to ASan overhead. For better performance (<1ms response time), always use the **release mode**.
 
 
 ## Usage
@@ -97,28 +120,77 @@ Open your browser at `http://localhost:3490` (or whichever port is set in `confi
 Your files will be accessible at `http://localhost:3490/index.html`, `http://localhost:3490/style.css`, etc.
 
 
-## Technical Deep Dive
+## Architecture & Internals
 
 ### Server General Architecture 
 
-Request lifecycle is designed as follows : 
+`skiff` is based on a single threaded event-driven architecture:
 
 ```mermaid
-flowchart TD
-    A([accept]) --> B(["fork()<br/><small>New child process</small>"])
-    B --> C(["FSM parser<br/><small>Read via ring buffer</small>"])
-    C --> D["Valid request ?<br/><small>Method, size and safety</small>"]
-    D -->|No| E(["4xx<br/><small>400 / 403</small>"])
-    D -->|Yes| F(["Router<br/><small>Passing request to handler</small>"])
-    E --> Z([close])
-    F --> G["Handling sucessful ?<br/><small>File found or successful CGI execution"]
-    G -->|No| H(["404<br/><small>Not Found</small>"])
-    G -->|Yes| I(["200 OK<br/><small>Headers, MIME, If-Modified-Since</small>"])
-    H --> Z
-    I --> J["Keep-Alive ?"]
-    J -->|No| Z
-    J -->|Yes| C
+flowchart LR
+    N_evt([New Event]) 
+    N_evt -->S_evt([Server Event])
+    N_evt -->C_evt([Client Event])
+
+    S_evt -->Acc([accept])
+    Acc -->Reg["Register New Client"<br><small>READ Event</small>]
+
+    C_evt -->C_R_evt([READ])
+    C_evt -->C_W_evt([WRITE])
+    C_evt -->C_T_evt([TIMER])
+
+    C_R_evt -->Prcss[Process Request]
+    Prcss -->Resp([Response fully sent ?]) 
+    Resp -->|No|RegCW["Register Client"<br><small>WRITE Event</small>]
+    Prcss -->KeepAlive([Keep Alive ?]) 
+    KeepAlive -->|Yes|RegCR["Register Client"<br><small>READ Event</small>]
+
+    C_W_evt -->Resp
+    
+    C_T_evt -->Close[Close Client Session]
 ```
+
+The main advantage of `skiff`'s request processing logic is that both data reception and emission mechanisms are designed to be **non-blocking**. Therefore, the parser can postpone partial requests completion to future exchanges, and sending responses will not pause the server if the client socket is not ready. To do so, each client is assigned a session containing, in particular, parsing progression information and a queue for responses waiting to be sent. The request processing logic is designed as follows: 
+
+
+```mermaid 
+flowchart TD
+    Data_Recv(["Data Reception"<br>Stored in ring buffer</br>]) 
+    Empty_Buffer([Buffer is empty ?])
+    Parse[Parse Data]
+    Check[Check Result]
+    Router[Router]
+    Handler[Method-specific Handler]
+    ErrHandler[Error Handler]
+    Send[Sender]
+    SendCPL([Send Complete ?])
+    SendAddQ[Add to Send queue]
+    Close([Connection Close ?])
+    Done([Done])
+
+    Data_Recv -->Empty_Buffer
+    Empty_Buffer -->|Yes|Done
+    Empty_Buffer -->|No|Parse
+    Parse -->|Parser Stopped|Check
+    Check -->|Error|ErrHandler 
+    Check -->|Ok|Router
+    Router -->Handler
+    Handler -->Send
+    ErrHandler-->Send
+    Send -->SendCPL
+    SendCPL -->|Yes|Close
+    SendCPL -->|No|SendAddQ
+    SendAddQ -->Close
+    Close -->|Yes|Done
+    Close -->|No|Empty_Buffer
+```
+
+An error during parsing is captured by the checker so as not to crash the entire process. 
+>[!NOTE] The [parsing](#robust-request-parsing) and [server response](#response-emission-optimization) mechanisms are detailed in the sections below. 
+
+
+### Abstract Event System 
+
 
 ### Robust Request Parsing 
 
@@ -138,6 +210,18 @@ flowchart TD
     I --> |Content-Length reached| J([END_PARSING])
 ```
 
+
+### Response Emission Optimization
+
+
+### Security 
+
+The server treats every input as hostile:
+
+- **Path Sanitization**: Uses `realpath()` to resolve and verify that requested files are strictly within the `www/` jail.
+- **Strict Buffer Limits**: Every parsing state (Method, URI, Headers) is guarded by customizable maximum lengths to prevent Buffer Overflow attacks.
+
+
 ### System Reliability & Signal Handling 
 
 To ensure 100% uptime and clean resource management, the server implements:
@@ -146,13 +230,42 @@ To ensure 100% uptime and clean resource management, the server implements:
 - **Atomic Signal Handlers**: Uses a non-blocking `waitpid` loop to reap child processes, preventing "zombie" accumulation.
 - `errno` **Preservation**: Careful restoration of `errno` within handlers to avoid corruption of the main thread's state.
 
-### Security & Sanitization
 
-The server treats every input as hostile:
 
-- **Path Sanitization**: Uses `realpath()` to resolve and verify that requested files are strictly within the `www/` jail.
-- **Strict Buffer Limits**: Every parsing state (Method, URI, Headers) is guarded by customizable maximum lengths to prevent Buffer Overflow attacks.
 
+
+## Tests 
+
+This project includes a Python tester used throughout the development to report and correct bugs. 
+
+### Test Categories
+
+The following error categories were tested : 
+- Basic valid requests
+- Error codes correctness
+- Request format (malformed, oversized requests and headers issues)
+- URI edge cases (path traversal or wrong path)
+- Connection handling and response format 
+
+### Tester Usage
+
+#### Prerequisites
+
+```bash
+python3 --version   #Python 3.13.7 or >=
+pip show rich | grep Version    #Version: 15.0.0 or >= 
+```
+#### Usage
+```bash
+python3 tester/test_runner.py
+```
+
+## Benchmark
+Tested with `wrk -c 100` on Macbook Air (M2). 
+Requests/sec:   4477.65
+Transfer/sec:     26.08MB
+
+`fork()` causes Requests/sec to be quite low (due to memory duplication), but it also reinforces safety by isolating processes from one another.
 
 ## Repository Structure 
 This repository has the following structure : 
@@ -217,39 +330,7 @@ This repository has the following structure :
 >relevant shebang.
 
 
-## Tests & Benchmark 
-
-This project includes a Python tester used throughout the development to report and correct bugs. 
-
-### Test Categories
-
-The following error categories were tested : 
-- Basic valid requests
-- Error codes correctness
-- Request format (malformed, oversized requests and headers issues)
-- URI edge cases (path traversal or wrong path)
-- Connection handling and response format 
-
-### Tester Usage
-
-#### Prerequisites
-
-```bash
-python3 --version   #Python 3.13.7 or >=
-pip show rich | grep Version    #Version: 15.0.0 or >= 
-```
-#### Usage
-```bash
-python3 tester/test_runner.py
-```
-
-### Benchmark
-Tested with `wrk -c 100` on Macbook Air (M2). 
-Requests/sec:   4477.65
-Transfer/sec:     26.08MB
-
-`fork()` causes Requests/sec to be quite low (due to memory duplication), but it also reinforces safety by isolating processes from one another.
-
 ## References
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
 - [RFC 9112 - HTTP/1.1](https://datatracker.ietf.org/doc/html/rfc9112)
+- [The C10K Problem](https://www.kegel.com/c10k.html)
