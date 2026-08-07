@@ -412,7 +412,7 @@ This repository has the following structure :
     Place your executables in the `cgi-bin` folder.
 
 >[!CAUTION]
->The server will try to run CGI scripts with `execl`. Make sure your scripts are either compiled or include a 
+>The server will try to run CGI scripts with `execve`. Make sure your scripts are either compiled or include a 
 >relevant shebang.
 
 
