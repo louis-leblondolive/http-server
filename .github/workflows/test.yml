@@ -21,10 +21,10 @@ jobs:
         with:
           python-version: '3.x'
           cache: 'pip'
-          cache-dependency-path: tester/requirements.txt
+          cache-dependency-path: test/requirements.txt
 
       - name: Install Python dependencies
-        run: pip install -r tester/requirements.txt
+        run: pip install -r test/requirements.txt
 
       - name: Start server
         run: |
@@ -33,4 +33,4 @@ jobs:
           sleep 2
 
       - name: Run tests
-        run: python3 tester/test_runner.py
+        run: python3 test/test_runner.py
