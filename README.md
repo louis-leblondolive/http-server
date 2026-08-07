@@ -26,9 +26,9 @@
     - [System Reliability](#system-reliability--signal-handling)
 - [Tests](#tests)
 - [Benchmark](#benchmark)
-    - [Current Performances]()
-    - [Architectures Comparison]()
-- [Known Limitations]()
+    - [Current Performances](#current-performances)
+    - [Architectures Comparison: fork() vs. event-driven](#architectures-comparison--fork-vs-event-driven)
+- [Known Limitations](#known-limitations)
 - [Repository Structure](#repository-structure)
 - [References](#references)
 
@@ -42,7 +42,7 @@
 - **FSM parser** : Handling partial request reception.
 - **Full static serving** : Served with proper MIME types and `If-Modified-Since` cache support.
 - **CGI support** : Environment-based execution following RFC 3875 output constraints.
-- **Security features** : Built-in `realpath` based protection against path traversal and buffer overflow.
+- **Security features** : Built-in buffer overflow protection and `realpath` based checks against path traversal.
 - **Demo website** : Start the server and test it at `http://localhost:3490`.
 
 >[!IMPORTANT]
@@ -59,8 +59,8 @@
 
 ### Installation 
 ```bash
-git clone https://github.com/louis-leblondolive/http-server.git
-cd http-server
+git clone https://github.com/louis-leblondolive/skiff.git
+cd skiff
 ```
 
 ### Compilation
@@ -77,7 +77,7 @@ make release
 ```
 
 > [!TIP]
-> You can edit `src/config.h` before building to configure the port, backlog, etc.
+> You can edit `include/core/config.h` before building to configure the port, backlog, etc.
 
 ### Run
 
@@ -85,10 +85,10 @@ You can run the generated binaries from the `build` directory, depending on the 
 
 ```bash
 # For debuging and safety checks
-./build/debug/main      
+./build/debug/skiff      
 
 # For performance testing 
-./build/release/main  
+./build/release/skiff  
 ```
 
 > [!TIP]
@@ -111,10 +111,10 @@ www/
 
 Then start the server (either on release or debug mode) :
 ```bash
-./build/release/main
+./build/release/skiff
 ```
 
-Open your browser at `http://localhost:3490` (or whichever port is set in `config.h`).
+Open your browser at `http://localhost:3490` (or whichever port is set in `include/core/config.h`).
 
 
 Your files will be accessible at `http://localhost:3490/index.html`, `http://localhost:3490/style.css`, etc.
@@ -186,10 +186,21 @@ flowchart TD
 ```
 
 An error during parsing is captured by the checker so as not to crash the entire process. 
->[!NOTE] The [parsing](#robust-request-parsing) and [server response](#response-emission-optimization) mechanisms are detailed in the sections below. 
+>[!NOTE] 
+>The [parsing](#robust-request-parsing) and [server response](#response-emission-optimization) mechanisms are detailed in the sections below. 
 
 
 ### Abstract Event System 
+
+`skiff`'s architecture relies on an event-driven core, which required to reconcile two structurally different kernel event APIs (`kqueue` and `epoll`, respectively running on macOS and Linux) without depending on a heavy external library like `libevent`.
+
+The core difficulty lies in how each API models a registered event:
+- `epoll` maintains **one entry per file descriptor**, with a bitmask of active filters (`EPOLLIN`, `EPOLLOUT`, ...) that must be updated via `EPOLL_CTL_MOD` whenever the set of watched events changes.
+- `kqueue` treats each `(ident, filter)` pair as an **independent registration** which means a single fd can have several unrelated entries (one per filter type), including filters with no fd at all, such as `EVFILT_TIMER`.
+
+`skiff` unifies both behind a single internal interface, translating a common registration call into the appropriate platform-specific representation.
+
+This abstraction also had to account for `EVFILT_TIMER` requiring the timeout mechanism to be modeled independently from socket I/O on macOS, whereas its Linux equivalent (`timerfd`) is file-descriptor based.
 
 
 ### Robust Request Parsing 
@@ -213,6 +224,12 @@ flowchart TD
 
 ### Response Emission Optimization
 
+`skiff` uses two distinct emission paths depending on the response type. Static files are served through `sendfile()`, transferring data directly within kernel space without copying it into a userspace buffer. CGI and raw outputs (like errors), on the other hand, are copied through a regular buffer before being sent.
+
+Because sends are non-blocking, a response is not guaranteed to be fully transmitted in a single call as the socket may not be ready to accept more data. When this happens, the current send state (including the file offset for `sendfile()`-based transfers) is saved and the response is pushed onto the session's send queue. The session is then registered for the `WRITE` event: each time the socket becomes writable again, the server attempts to flush the queue, repeating this process until the response is fully sent.
+
+> [!NOTE]
+> `sendfile()`'s signature differs between Linux and macOS, requiring a small platform abstraction — a much lighter one than the event queue abstraction described [above](#abstract-event-system).
 
 ### Security 
 
@@ -227,45 +244,87 @@ The server treats every input as hostile:
 To ensure 100% uptime and clean resource management, the server implements:
 
 - `SA_RESTART` **flags** : Prevents system calls (`accept`, `read`) from being interrupted by internal signals.
-- **Atomic Signal Handlers**: Uses a non-blocking `waitpid` loop to reap child processes, preventing "zombie" accumulation.
+- **Atomic Signal Handlers**: Uses a non-blocking `waitpid` loop to reap child CGI processes, preventing "zombie" accumulation.
 - `errno` **Preservation**: Careful restoration of `errno` within handlers to avoid corruption of the main thread's state.
-
 
 
 
 
 ## Tests 
 
-This project includes a Python tester used throughout the development to report and correct bugs. 
+`skiff` includes a Python test suite (`test/test_runner.py`) used throughout development to catch bugs and issues. It runs automatically on every push via the CI pipeline (see badges above).
 
 ### Test Categories
 
-The following error categories were tested : 
-- Basic valid requests
-- Error codes correctness
-- Request format (malformed, oversized requests and headers issues)
-- URI edge cases (path traversal or wrong path)
-- Connection handling and response format 
+The suite covers 9 categories, exercising both correct behavior and edge cases:
+- Valid requests (GET, HEAD, OPTIONS)
+- HTTP error codes
+- Malformed requests
+- Size limits (method, path, headers and body tested at and beyond configured boundaries)
+- Header edge cases
+- URI edge cases (path traversal, oversized/malformed paths)
+- Connection handling (Keep-Alive, pipelining)
+- Parser edge cases (FSM boundary conditions)
+- Response header correctness
+
+> [!NOTE]
+> This suite does not yet cover CGI execution or concurrent client load — see [Known Limitations](#known-limitations).
 
 ### Tester Usage
 
 #### Prerequisites
 
 ```bash
-python3 --version   #Python 3.13.7 or >=
-pip show rich | grep Version    #Version: 15.0.0 or >= 
+pip install -r test/requirements.txt
 ```
+
 #### Usage
 ```bash
-python3 tester/test_runner.py
+python3 test/test_runner.py
 ```
 
-## Benchmark
-Tested with `wrk -c 100` on Macbook Air (M2). 
-Requests/sec:   4477.65
-Transfer/sec:     26.08MB
 
-`fork()` causes Requests/sec to be quite low (due to memory duplication), but it also reinforces safety by isolating processes from one another.
+## Benchmark
+
+### Current Performances
+`skiff` was tested with `wrk` on Macbook Air (M2). Here are the results for different numbers of opened connections (`-c`):
+
+| Number of connections | Req/s | RAM used    | CPU Load       | Error percentage |
+|-----------------------|-------|-------------|----------------|------------------|
+| 1                     | 16827 | 2.5 MB      | 70.7%          | 0%               |
+| 100                   | 25136 | 37.9 MB     | 95.5%          | 0%               |
+| 500                   | 25305 | 58.8 MB     | 94.5%          | 0%               |
+| 1000                  | 25440 | 101.9 MB    | 94.8%          | 0.2%             |
+| 5000                  | 25453 | 244.3 MB    | 94.3%          | 3.2%             |
+| 10000                 | 25410 | 655.0 MB    | 95.6%          | 7.4%             |
+| 20000                 | 25307 | 1011.5 MB   | 94.8%          | 15.8%            |
+| 30000                 | 25200 | 1548.5 MB   | 95.2%          | 23.5%            |
+
+The req/s rate remains steady, even when the number of simultaneous connections rises above 10K, a good sign for the C10K problem were it not for the `connect` error rates. The nearly full CPU load, measured with `htop` for the sole `skiff` process, suggests that the server bottleneck is request processing rather than syscalls. As several requests can be handled in parallel, a multithreaded architecture would improve performances and is planned for upcoming versions. 
+
+The test is biased by the OS file descriptor and sockets limit (left at its default value), as demonstrated by the climbing error rate and `wrk` reporting the errors as connect socket errors. 
+
+
+### Architectures Comparison : fork() vs. event-driven
+
+Before migrating to the event-driven model, `skiff` used a fork-per-connection architecture. A direct comparison at `-c 100` illustrates the impact of the migration:
+
+| Architecture     | Req/s     | Transfer/s |
+|-------------------|-----------|------------|
+| fork() (legacy)   | 4,477.65  | 26.08 MB   |
+| Event-driven       | 25,136    | ~146 MB   |
+
+Event-driven throughput at the same concurrency level is roughly **5.6x** higher.
+
+> [!NOTE]
+> Memory usage for the fork() version could not be reliably measured: under load, the server spawns a large number of short-lived child processes, and no consistent sampling method was available to sum their combined RSS at capture time. This measurement difficulty is itself indicative of a structural downside of the fork-per-connection model. 
+
+
+## Known Limitations
+
+- **Multiple `send()` calls instead of `writev()`**: response status, headers and body are currently sent through separate `send()` calls rather than a single `writev()`, resulting in more syscalls than necessary per response.
+- **Blocking CGI pipe read**: the pipe connected to a CGI script's output is read synchronously rather than being registered in the event queue. Since `skiff` is single-threaded, a slow or hanging CGI script blocks the entire event loop. Moving to a multithreaded model (see [Current Performances](#current-performances)) could serve as an intermediate solution, isolating a blocking CGI read to a single thread instead of stalling the whole server (though registering the CGI pipe in the event queue remains the more direct fix.)
+- **Manual, non-exhaustive testing**: the Python test suite (`test/test_runner.py`) covers HTTP correctness (valid requests, error codes, malformed input, size limits, header edge cases, URI handling, connection behavior, parser edge cases, response headers), but does not yet cover CGI execution, partial request reception or concurrent client load. Those were still validated manually during development, but not through automated regression tests. 
 
 ## Repository Structure 
 This repository has the following structure : 
@@ -273,18 +332,30 @@ This repository has the following structure :
 
 ./
 ├── src/
-│   ├── lib/
-│   │   ├── http
-│   │   ├── net
-│   │   └── utils
-│   ├── config.h
-│   └── main.c
+│   ├── core/
+│   │   ├── event/
+│   │   ├── main.c
+│   │   └── reactor.c
+│   ├── ds/
+│   ├── http/
+│   │   ├── ds/
+│   │   ├── parser/
+│   │   ├── router/
+│   │   ├── handler/
+│   │   └── responder/
+│   ├── net/
+│   └── utils/
+|
+├── include/
+|
 ├── www/
 │   ├── cgi-bin/
 │   │   └── .../
 │   ├── index.html
 │   └── .../
-├── tester/
+|
+├── test/
+|   ├── bench.sh
 │   ├── test_runner.py
 │   └── test_suite.py
 │
@@ -293,31 +364,46 @@ This repository has the following structure :
 
 - **`src`**
 
-    This directory contains all the server code. 
+    This directory contains all the server source code. 
 
-    - **`lib`**  
+    - **`core`**  
     
-        This folder contains the server code, divided in two folders : 
-        - `http` where the protocol is implemented (FSM parser, Router, Response)
-        - `net` where server execution and communication is handled (Socket setup and Listening loop)
-        - `utils` where various tools are implemented 
+        This folder contains `skiff`'s core code, including:
+        - `event/` where the event queue API is implemented for both macOS and Linux.
+        - `reactor.c` containing the server main event loop
+        - `main.c`, the server entry point, which should remain untouched. 
 
-    - **`config.h`** 
+    - **`http`**
 
-        This file allows you to change server parameters, including : 
+        This folder contains the HTTP protocol implementation: 
+        - The `ds` folder contains the various data structures used for sessions, requests and responses. 
+        - The `parser`, `router`, `handler` and `responder` folder contains the implementation of the corresponding operation. 
+
+    - **`net`**
+
+        This folder is where server communication is handled (Socket setup and `sendfile()` abstraction)
+
+    - **`ds`**
+
+        This folder contains generic data structures used during execution (such as the ring buffer implementation).
+
+    - **`utils`**
+
+        This folder contains the implementation of various tools (e.g. a custom printer or an IP address converter)
+
+- **`include`**
+
+    This folder follows the same structure as `src`, but with headers instead of `.c` files. A notable file is **`core/config.h`** that allows you to change server parameters, including : 
         - Port and backlog
         - Server name and version 
         - Default path to use when meeting a `/`request 
         - Request size parameters  
 
-    - **`main.c`**
-
-        The server entry point, which should remain untouched. 
-
-- **`tester`**
+        
+- **`test`**
 
     This folder contains a Python tester used to report bugs during development. The `test_runner.py` file 
-    runs all tests contained in `test_suite.py`.
+    runs all tests contained in `test_suite.py`. It also contains a benchmark script (`bench.sh`) relying on `wrk`.
 
 - **`www`**
     
