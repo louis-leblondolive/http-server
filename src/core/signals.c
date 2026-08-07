@@ -14,10 +14,18 @@ void sigchld_handler(int s){
 
 int init_signal_handlers(void){
     
-    struct sigaction sa; 
-    sa.sa_flags = SA_RESTART;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_handler = sigchld_handler;
+    struct sigaction sa_chld; 
+    sa_chld.sa_flags = SA_RESTART;
+    sigemptyset(&sa_chld.sa_mask);
+    sa_chld.sa_handler = sigchld_handler;
 
-    return sigaction(SIGCHLD, &sa, NULL);
+    struct sigaction sa_ignore; 
+    sa_ignore.sa_flags = SA_RESTART;
+    sigemptyset(&sa_ignore.sa_mask);
+    sa_ignore.sa_handler = SIG_IGN;
+
+    if(sigaction(SIGCHLD, &sa_chld, NULL) != 0) return 1;
+    if(sigaction(SIGPIPE, &sa_ignore, NULL) != 0) return 1;
+
+    return 0;
 }
