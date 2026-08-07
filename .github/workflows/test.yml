@@ -29,7 +29,7 @@ jobs:
       - name: Start server
         run: |
           export ASAN_OPTIONS=detect_leaks=0:abort_on_error=1
-          ./build/debug/main &
+          ./build/debug/skiff &
           sleep 2
 
       - name: Run tests
