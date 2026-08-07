@@ -1,6 +1,6 @@
 # --- Config ---
 CC       := cc
-TARGET   := main
+TARGET   := skiff
 BUILD_DIR := build
 OBJ_DIR   := obj
 
